@@ -94,7 +94,7 @@ const Admin = () => {
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl px-4 pb-12 lg:px-0">
+      <main className="mx-auto max-w-6xl px-4 pb-8 sm:pb-12 lg:px-0">
         {!supabaseConfigured ? (
           <div className="rounded-3xl border border-amber-200 bg-amber-50 px-6 py-8 text-center text-amber-800">
             <i className="fa fa-triangle-exclamation text-3xl" aria-hidden="true" />
@@ -110,7 +110,7 @@ const Admin = () => {
             <p className="mt-3 font-semibold text-slate-600">Preparing your dashboard...</p>
           </div>
         ) : (
-          <div className="space-y-10">
+          <div className="space-y-6 sm:space-y-8 md:space-y-10">
             <UploadExcel onUploadComplete={fetchCertificates} />
 
             <ManualEntry onUploadComplete={fetchCertificates} />

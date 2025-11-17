@@ -201,22 +201,22 @@ const ManualEntry = ({ onUploadComplete }) => {
   };
 
   return (
-    <section className="rounded-2xl bg-white/90 p-6 shadow-soft">
+    <section className="rounded-xl bg-white/90 p-4 shadow-soft sm:rounded-2xl sm:p-6">
       {!isExpanded ? (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 items-start justify-between sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3rem] text-secondary">
               Manual Entry
             </p>
-            <h2 className="mt-1 font-heading text-[28px] text-dark">Add Certificate Manually</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+            <h2 className="mt-1 font-heading text-xl text-dark sm:text-2xl md:text-[28px]">Add Certificate Manually</h2>
+            <p className="mt-1 max-w-2xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
               Enter certificate details manually. You can add up to 2 entries at once.
             </p>
           </div>
           <button
             type="button"
             onClick={handleExpand}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 sm:w-auto sm:px-5 sm:py-3 sm:text-sm"
           >
             <i className="fa fa-plus" aria-hidden="true" />
             <span>Add Entry</span>
@@ -293,7 +293,7 @@ const ManualEntry = ({ onUploadComplete }) => {
               )}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-semibold text-slate-700">
                   Name <span className="text-red-500">*</span>

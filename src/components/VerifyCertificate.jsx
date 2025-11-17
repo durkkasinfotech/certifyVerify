@@ -199,30 +199,30 @@ const VerifyCertificate = ({ initialCertificate }) => {
   }, [result]);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-white to-slate-50/50 p-10 shadow-2xl ring-1 ring-slate-200/50">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-white to-slate-50/50 p-4 shadow-2xl ring-1 ring-slate-200/50 sm:p-6 md:p-10">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
-      <div className="relative mb-8">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 px-4 py-1.5">
+      <div className="relative mb-6 sm:mb-8">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary sm:px-4 sm:py-1.5">
           <i className="fa fa-shield-check text-primary" aria-hidden="true" />
           <span className="text-xs font-semibold uppercase tracking-wider text-primary">Secure Verification</span>
         </div>
-        <h2 className="font-heading text-4xl font-bold tracking-tight text-dark md:text-5xl">
+        <h2 className="font-heading text-2xl font-bold tracking-tight text-dark sm:text-3xl md:text-4xl lg:text-5xl">
           Verify Your Certificate
         </h2>
-        <p className="mt-3 text-base leading-relaxed text-slate-600 md:text-lg">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:mt-3 sm:text-base md:text-lg">
           Enter the certificate number exactly as it appears on the certificate to verify instantly.
         </p>
       </div>
 
-      <div className="relative space-y-6">
+      <div className="relative space-y-4 sm:space-y-6">
         <label className="block">
-          <span className="mb-3 block font-display text-sm font-semibold uppercase tracking-wider text-slate-700">
+          <span className="mb-2 block text-xs font-display font-semibold uppercase tracking-wider text-slate-700 sm:mb-3 sm:text-sm">
             Certificate Number
           </span>
-          <div className="mt-3 flex flex-col gap-4 sm:flex-row">
+          <div className="mt-2 flex flex-col gap-3 sm:mt-3 sm:flex-row sm:gap-4">
             <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4">
-                <i className="fa fa-certificate text-slate-400" aria-hidden="true" />
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4">
+                <i className="fa fa-certificate text-sm text-slate-400 sm:text-base" aria-hidden="true" />
               </div>
               <input
                 type="text"
@@ -231,14 +231,14 @@ const VerifyCertificate = ({ initialCertificate }) => {
                   setCertificateNumber(toCanonicalCertificate(event.target.value))
                 }
                 placeholder="e.g. DARE/AIR/LP/25-26-001"
-                className="w-full rounded-2xl border-2 border-slate-200 bg-white pl-12 pr-4 py-4 text-base font-semibold uppercase tracking-wide text-dark shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-primary focus:shadow-lg focus:shadow-primary/10 focus:ring-4 focus:ring-primary/10"
+                className="w-full rounded-xl border-2 border-slate-200 bg-white pl-10 pr-3 py-3 text-sm font-semibold uppercase tracking-wide text-dark shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-primary focus:shadow-lg focus:shadow-primary/10 focus:ring-2 focus:ring-primary/10 sm:rounded-2xl sm:pl-12 sm:pr-4 sm:py-4 sm:text-base"
               />
             </div>
             <button
               type="button"
               onClick={() => handleVerify()}
               disabled={isLoading}
-              className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-primary/90 px-8 py-4 font-display text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/40 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-slate-300 disabled:shadow-none"
+              className="group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary/90 px-6 py-3 font-display text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/40 disabled:cursor-not-allowed disabled:scale-100 disabled:bg-slate-300 disabled:shadow-none sm:w-auto sm:rounded-2xl sm:px-8 sm:py-4 sm:text-sm"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               {isLoading ? (
@@ -249,7 +249,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
               ) : (
                 <>
                   <i className="fa fa-search relative z-10" aria-hidden="true" />
-                  <span className="relative z-10">Verify Certificate</span>
+                  <span className="relative z-10">Verify</span>
                 </>
               )}
             </button>
@@ -257,23 +257,23 @@ const VerifyCertificate = ({ initialCertificate }) => {
         </label>
 
         {error ? (
-          <div className="relative overflow-hidden rounded-2xl border-2 border-red-200/80 bg-gradient-to-br from-red-50 to-red-100/50 px-6 py-5 shadow-lg ring-2 ring-red-100">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 rounded-full bg-red-500/10 p-2">
-                <i className="fa fa-circle-xmark text-xl text-red-600" aria-hidden="true" />
+          <div className="relative overflow-hidden rounded-xl border-2 border-red-200/80 bg-gradient-to-br from-red-50 to-red-100/50 px-4 py-4 shadow-lg ring-2 ring-red-100 sm:rounded-2xl sm:px-6 sm:py-5">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="flex-shrink-0 rounded-full bg-red-500/10 p-1.5 sm:p-2">
+                <i className="fa fa-circle-xmark text-lg text-red-600 sm:text-xl" aria-hidden="true" />
               </div>
-              <div className="flex-1">
-                <p className="font-display text-base font-semibold text-red-800">Certificate not found</p>
-                <p className="mt-1 text-sm leading-relaxed text-red-700">{error}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-display text-sm font-semibold text-red-800 sm:text-base">Certificate not found</p>
+                <p className="mt-1 text-xs leading-relaxed text-red-700 sm:text-sm break-words">{error}</p>
               </div>
             </div>
           </div>
         ) : null}
 
         {result ? (
-          <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-300/50 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 p-10 text-white shadow-2xl ring-4 ring-emerald-200/30">
-            <div className="relative flex flex-col gap-8 lg:flex-row lg:items-start">
-              <div className="flex-1 space-y-5">
+          <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-300/50 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 p-4 text-white shadow-2xl ring-4 ring-emerald-200/30 sm:rounded-3xl sm:p-6 md:p-10">
+            <div className="relative flex flex-col gap-6 sm:gap-8 lg:flex-row lg:items-start">
+              <div className="flex-1 space-y-4 sm:space-y-5">
                 <div
                   className={`transform transition-all duration-700 ease-out ${
                     visibleItems.badge
@@ -281,13 +281,13 @@ const VerifyCertificate = ({ initialCertificate }) => {
                       : 'translate-y-8 opacity-0'
                   }`}
                 >
-                  <div className="inline-flex items-center gap-2.5 rounded-full bg-white/90 backdrop-blur-md px-5 py-2.5 text-xs font-display font-bold uppercase tracking-wider shadow-xl ring-2 ring-white/50">
-                    <i className="fa fa-circle-check text-sm text-emerald-600" aria-hidden="true" /> 
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/90 backdrop-blur-md px-3 py-1.5 text-xs font-display font-bold uppercase tracking-wider shadow-xl ring-2 ring-white/50 sm:gap-2.5 sm:px-5 sm:py-2.5">
+                    <i className="fa fa-circle-check text-xs text-emerald-600 sm:text-sm" aria-hidden="true" /> 
                     <span className="text-dark">Verified Certificate</span>
                   </div>
                 </div>
                 <h3
-                  className={`transform text-center font-heading text-4xl font-bold leading-tight tracking-tight text-dark transition-all duration-700 ease-out md:text-5xl ${
+                  className={`transform text-center font-heading text-2xl font-bold leading-tight tracking-tight text-dark transition-all duration-700 ease-out sm:text-3xl md:text-4xl lg:text-5xl ${
                     visibleItems.name
                       ? 'translate-y-0 opacity-100'
                       : 'translate-y-8 opacity-0'
@@ -295,98 +295,98 @@ const VerifyCertificate = ({ initialCertificate }) => {
                 >
                   {result.name}
                 </h3>
-                <div className="grid gap-5 text-sm md:grid-cols-2">
+                <div className="grid gap-3 text-xs sm:gap-4 sm:text-sm md:grid-cols-2 md:gap-5">
                   <div
-                    className={`transform rounded-2xl bg-white/90 p-5 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white ${
+                    className={`transform rounded-xl bg-white/90 p-3 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white sm:rounded-2xl sm:p-4 md:p-5 ${
                       visibleItems.details[0]
                         ? 'translate-y-0 opacity-100'
                         : 'translate-y-8 opacity-0'
                     }`}
                   >
-                    <div className="mb-3 flex items-center gap-2">
-                      <i className="fa fa-hashtag text-sm text-slate-600" aria-hidden="true" />
-                      <span className="text-xs font-display font-bold uppercase tracking-wider text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                      <i className="fa fa-hashtag text-xs text-slate-600 sm:text-sm" aria-hidden="true" />
+                      <span className="text-[10px] font-display font-bold uppercase tracking-wider text-slate-700 sm:text-xs">
                         Certificate Number
                       </span>
                     </div>
-                    <p className="font-display text-lg font-semibold text-dark">{result.certificate_no}</p>
+                    <p className="font-display text-sm font-semibold text-dark break-all sm:text-base md:text-lg">{result.certificate_no}</p>
                   </div>
                   <div
-                    className={`transform rounded-2xl bg-white/90 p-5 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white ${
+                    className={`transform rounded-xl bg-white/90 p-3 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white sm:rounded-2xl sm:p-4 md:p-5 ${
                       visibleItems.details[1]
                         ? 'translate-y-0 opacity-100'
                         : 'translate-y-8 opacity-0'
                     }`}
                   >
-                    <div className="mb-3 flex items-center gap-2">
-                      <i className="fa fa-envelope text-sm text-slate-600" aria-hidden="true" />
-                      <span className="text-xs font-display font-bold uppercase tracking-wider text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                      <i className="fa fa-envelope text-xs text-slate-600 sm:text-sm" aria-hidden="true" />
+                      <span className="text-[10px] font-display font-bold uppercase tracking-wider text-slate-700 sm:text-xs">
                         Email
                       </span>
                     </div>
-                    <p className="font-display text-lg font-semibold text-dark">{result.email || '—'}</p>
+                    <p className="font-display text-sm font-semibold text-dark break-all sm:text-base md:text-lg">{result.email || '—'}</p>
                   </div>
                   <div
-                    className={`transform rounded-2xl bg-white/90 p-5 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white ${
+                    className={`transform rounded-xl bg-white/90 p-3 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white sm:rounded-2xl sm:p-4 md:p-5 ${
                       visibleItems.details[2]
                         ? 'translate-y-0 opacity-100'
                         : 'translate-y-8 opacity-0'
                     }`}
                   >
-                    <div className="mb-3 flex items-center gap-2">
-                      <i className="fa fa-laptop text-sm text-slate-600" aria-hidden="true" />
-                      <span className="text-xs font-display font-bold uppercase tracking-wider text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                      <i className="fa fa-laptop text-xs text-slate-600 sm:text-sm" aria-hidden="true" />
+                      <span className="text-[10px] font-display font-bold uppercase tracking-wider text-slate-700 sm:text-xs">
                         Mode
                       </span>
                     </div>
-                    <p className="font-display text-lg font-semibold text-dark">{result.mode || '—'}</p>
+                    <p className="font-display text-sm font-semibold text-dark sm:text-base md:text-lg">{result.mode || '—'}</p>
                   </div>
                   <div
-                    className={`transform rounded-2xl bg-white/90 p-5 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white ${
+                    className={`transform rounded-xl bg-white/90 p-3 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white sm:rounded-2xl sm:p-4 md:p-5 ${
                       visibleItems.details[3]
                         ? 'translate-y-0 opacity-100'
                         : 'translate-y-8 opacity-0'
                     }`}
                   >
-                    <div className="mb-3 flex items-center gap-2">
-                      <i className="fa fa-map-marker-alt text-sm text-slate-600" aria-hidden="true" />
-                      <span className="text-xs font-display font-bold uppercase tracking-wider text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                      <i className="fa fa-map-marker-alt text-xs text-slate-600 sm:text-sm" aria-hidden="true" />
+                      <span className="text-[10px] font-display font-bold uppercase tracking-wider text-slate-700 sm:text-xs">
                         Location / Institution
                       </span>
                     </div>
-                    <p className="font-display text-lg font-semibold text-dark">
+                    <p className="font-display text-sm font-semibold text-dark break-words sm:text-base md:text-lg">
                       {result.location_or_institution || '—'}
                     </p>
                   </div>
                   <div
-                    className={`transform rounded-2xl bg-white/90 p-5 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white ${
+                    className={`transform rounded-xl bg-white/90 p-3 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white sm:rounded-2xl sm:p-4 md:p-5 ${
                       visibleItems.details[4]
                         ? 'translate-y-0 opacity-100'
                         : 'translate-y-8 opacity-0'
                     }`}
                   >
-                    <div className="mb-3 flex items-center gap-2">
-                      <i className="fa fa-calendar-alt text-sm text-slate-600" aria-hidden="true" />
-                      <span className="text-xs font-display font-bold uppercase tracking-wider text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                      <i className="fa fa-calendar-alt text-xs text-slate-600 sm:text-sm" aria-hidden="true" />
+                      <span className="text-[10px] font-display font-bold uppercase tracking-wider text-slate-700 sm:text-xs">
                         Date Issued
                       </span>
                     </div>
-                    <p className="font-display text-lg font-semibold text-dark">{result.date_issued}</p>
+                    <p className="font-display text-sm font-semibold text-dark sm:text-base md:text-lg">{result.date_issued}</p>
                   </div>
                   <div
-                    className={`transform rounded-2xl bg-white/90 p-5 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white ${
+                    className={`transform rounded-xl bg-white/90 p-3 backdrop-blur-md shadow-lg ring-1 ring-white/50 transition-all duration-700 ease-out hover:bg-white sm:rounded-2xl sm:p-4 md:p-5 ${
                       visibleItems.details[5]
                         ? 'translate-y-0 opacity-100'
                         : 'translate-y-8 opacity-0'
                     }`}
                   >
-                    <div className="mb-3 flex items-center gap-2">
-                      <i className="fa fa-user-tie text-sm text-slate-600" aria-hidden="true" />
-                      <span className="text-xs font-display font-bold uppercase tracking-wider text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                      <i className="fa fa-user-tie text-xs text-slate-600 sm:text-sm" aria-hidden="true" />
+                      <span className="text-[10px] font-display font-bold uppercase tracking-wider text-slate-700 sm:text-xs">
                         Issued By
                       </span>
                     </div>
-                    <p className="font-display text-lg font-semibold text-dark">{result.issued_by || '—'}</p>
+                    <p className="font-display text-sm font-semibold text-dark break-words sm:text-base md:text-lg">{result.issued_by || '—'}</p>
                   </div>
                 </div>
               </div>

@@ -147,20 +147,20 @@ const UploadExcel = ({ onUploadComplete }) => {
   };
 
   return (
-    <section className="rounded-2xl bg-white/90 p-6 shadow-soft">
-      <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section className="rounded-xl bg-white/90 p-4 shadow-soft sm:rounded-2xl sm:p-6">
+      <header className="mb-4 flex flex-col gap-3 sm:mb-6 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.3rem] text-secondary">
             Upload Excel
           </p>
-          <h2 className="mt-1 font-heading text-[28px] text-dark">Bulk Certificate Import</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">
+          <h2 className="mt-1 font-heading text-xl text-dark sm:text-2xl md:text-[28px]">Bulk Certificate Import</h2>
+          <p className="mt-1 max-w-2xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
             Upload an Excel sheet with columns:{' '}
-            <code className="font-mono text-xs">sno, roll_no, name, phone, email, date_issued,
+            <code className="font-mono text-[10px] sm:text-xs">sno, roll_no, name, phone, email, date_issued,
             issued_by, mode, location_or_institution, certificate_no</code>.
           </p>
         </div>
-        <label className="inline-flex cursor-pointer items-center gap-3 rounded-full bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 sm:gap-3 sm:px-5 sm:py-3 sm:text-sm">
           <i className="fa fa-file-upload" aria-hidden="true" />
           <span>Select File</span>
           <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
@@ -196,7 +196,7 @@ const UploadExcel = ({ onUploadComplete }) => {
       ) : null}
 
       {parsedSummary ? (
-        <div className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-700 md:grid-cols-3">
+        <div className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-700 sm:mt-6 sm:gap-4 sm:p-4 sm:text-sm md:grid-cols-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Total Rows</p>
             <p className="mt-1 text-2xl font-semibold text-dark">{parsedSummary.total}</p>
@@ -213,16 +213,16 @@ const UploadExcel = ({ onUploadComplete }) => {
       ) : null}
 
       {rows.length ? (
-        <div className="mt-6 max-h-[26rem] overflow-auto rounded-xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-primary text-left text-xs uppercase tracking-wide text-white">
+        <div className="mt-4 max-h-[26rem] overflow-x-auto overflow-y-auto rounded-xl border border-slate-200 sm:mt-6">
+          <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+            <thead className="bg-primary text-left text-[10px] uppercase tracking-wide text-white sm:text-xs">
               <tr>
-                <th className="px-4 py-3">S.No</th>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Roll No</th>
-                <th className="px-4 py-3">Mode</th>
-                <th className="px-4 py-3">Date Issued</th>
-                <th className="px-4 py-3">Certificate #</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">S.No</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Name</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Roll No</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Mode</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Date Issued</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Certificate #</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white/80">
@@ -233,22 +233,22 @@ const UploadExcel = ({ onUploadComplete }) => {
                   : row.date_issued_raw;
                 return (
                   <tr key={`${row.roll_no}-${row.sno}`}>
-                    <td className="px-4 py-3 font-medium text-slate-600">{row.sno}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-dark">{row.name}</p>
-                      <p className="text-xs text-slate-500">{row.email}</p>
+                    <td className="px-2 py-2 font-medium text-slate-600 sm:px-4 sm:py-3">{row.sno}</td>
+                    <td className="px-2 py-2 sm:px-4 sm:py-3">
+                      <p className="font-semibold text-dark text-xs sm:text-sm">{row.name}</p>
+                      <p className="text-[10px] text-slate-500 sm:text-xs">{row.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{row.roll_no}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary">
-                        <i className="fa fa-graduation-cap text-[10px]" aria-hidden="true" />
+                    <td className="px-2 py-2 text-slate-600 sm:px-4 sm:py-3 whitespace-nowrap">{row.roll_no}</td>
+                    <td className="px-2 py-2 sm:px-4 sm:py-3">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:gap-2 sm:px-3 sm:py-1 sm:text-xs">
+                        <i className="fa fa-graduation-cap text-[8px] sm:text-[10px]" aria-hidden="true" />
                         {row.mode || '—'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{issuedText}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-2 py-2 text-slate-600 sm:px-4 sm:py-3 whitespace-nowrap text-xs sm:text-sm">{issuedText}</td>
+                    <td className="px-2 py-2 text-slate-600 sm:px-4 sm:py-3">
                       {row.certificate_no_raw || (
-                        <span className="text-xs uppercase text-amber-600">Auto-generate</span>
+                        <span className="text-[10px] uppercase text-amber-600 sm:text-xs">Auto-generate</span>
                       )}
                     </td>
                   </tr>
@@ -259,8 +259,8 @@ const UploadExcel = ({ onUploadComplete }) => {
         </div>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">
+      <div className="mt-4 flex flex-col items-start justify-between gap-3 sm:mt-6 sm:flex-row sm:items-center">
+        <p className="text-[10px] text-slate-500 sm:text-xs">
           Ensure the Excel headers exactly match the required schema. Leave <code>certificate_no</code>{' '}
           blank to auto-generate values.
         </p>
@@ -268,7 +268,7 @@ const UploadExcel = ({ onUploadComplete }) => {
           type="button"
           onClick={handleUpload}
           disabled={!rows.length || isUploading}
-          className="inline-flex items-center gap-2 rounded-full bg-secondary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-secondary/90 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-secondary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-secondary/90 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto sm:px-5 sm:py-3 sm:text-sm"
         >
           {isUploading ? (
             <>

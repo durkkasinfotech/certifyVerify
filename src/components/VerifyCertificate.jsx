@@ -32,8 +32,28 @@ const convertLegacyHyphenToSlash = (value) => {
 const toCanonicalCertificate = (value) => {
   const normalized = normalizeCertificateNumber(value);
   if (!normalized) return '';
-  if (normalized.includes('/')) return normalized;
+  if (normalized.includes('/')) {
+    // Normalize the sequence separator to use slash (convert -001 to /001)
+    return normalized.replace(/-(\d{3,})$/, '/$1');
+  }
   return convertLegacyHyphenToSlash(normalized);
+};
+
+// Normalize certificate number for database lookup - tries both formats
+const normalizeForLookup = (value) => {
+  const canonical = toCanonicalCertificate(value);
+  if (!canonical) return [];
+  
+  // Return both formats: with slash and with hyphen before sequence
+  const formats = [canonical]; // DARE/AIR/LP/25-26/001
+  
+  // Also try with hyphen before sequence if it currently has slash
+  if (canonical.includes('/') && canonical.match(/\/\d{3,}$/)) {
+    const withHyphen = canonical.replace(/\/(\d{3,})$/, '-$1'); // DARE/AIR/LP/25-26-001
+    formats.push(withHyphen);
+  }
+  
+  return [...new Set(formats)]; // Remove duplicates
 };
 
 const toPathCertificate = (value) => encodeURIComponent(toCanonicalCertificate(value));
@@ -74,28 +94,52 @@ const VerifyCertificate = ({ initialCertificate }) => {
     setResult(null);
 
     try {
-      let { data, error: queryError } = await supabase
-        .from('certificates')
-        .select('*')
-        .eq('certificate_no', input)
-        .maybeSingle();
+      // Try both formats (with slash and with hyphen before sequence)
+      const lookupFormats = normalizeForLookup(input);
+      let data = null;
+      let queryError = null;
+
+      // Try exact match with all possible formats
+      for (const format of lookupFormats) {
+        const { data: result, error } = await supabase
+          .from('certificates')
+          .select('*')
+          .eq('certificate_no', format)
+          .maybeSingle();
+
+        if (error) {
+          queryError = error;
+          break;
+        }
+
+        if (result) {
+          data = result;
+          break;
+        }
+      }
 
       if (queryError) {
         throw queryError;
       }
 
+      // Fallback to case-insensitive search if exact match fails
       if (!data) {
-        const fallback = await supabase
-          .from('certificates')
-          .select('*')
-          .ilike('certificate_no', input)
-          .limit(1);
+        for (const format of lookupFormats) {
+          const fallback = await supabase
+            .from('certificates')
+            .select('*')
+            .ilike('certificate_no', format)
+            .limit(1);
 
-        if (fallback.error) {
-          throw fallback.error;
+          if (fallback.error) {
+            throw fallback.error;
+          }
+
+          if (fallback.data?.[0]) {
+            data = fallback.data[0];
+            break;
+          }
         }
-
-        data = fallback.data?.[0];
       }
 
       if (!data) {
@@ -104,6 +148,13 @@ const VerifyCertificate = ({ initialCertificate }) => {
         );
       }
 
+      // Update URL without causing navigation issues
+      const newPath = `/verify/${toPathCertificate(data.certificate_no)}`;
+      if (window.location.pathname !== newPath) {
+        window.history.replaceState(null, '', newPath);
+      }
+      
+      // Set result and reset visibility state
       setResult(data);
       setError('');
       setVisibleItems({
@@ -111,7 +162,6 @@ const VerifyCertificate = ({ initialCertificate }) => {
         name: false,
         details: Array(6).fill(false),
       });
-      navigate(`/verify/${toPathCertificate(data.certificate_no)}`, { replace: true });
     } catch (err) {
       const message = err?.message ?? 'Verification failed. Please try again later.';
       setError(message);
@@ -125,15 +175,25 @@ const VerifyCertificate = ({ initialCertificate }) => {
     if (initialCertificate) {
       const normalized = toCanonicalCertificate(initialCertificate);
       setCertificateNumber(normalized);
-      // Reset result on page refresh/load - don't auto-verify
-      setResult(null);
-      setError('');
-      setVisibleItems({
-        badge: false,
-        name: false,
-        details: Array(6).fill(false),
-      });
+      // Auto-verify when certificate number is provided via URL (QR code scan)
+      if (normalized) {
+        // Use a small timeout to ensure state is set before verifying
+        const timer = setTimeout(() => {
+          handleVerify(normalized);
+        }, 100);
+        return () => clearTimeout(timer);
+      } else {
+        // Reset result if no valid certificate number
+        setResult(null);
+        setError('');
+        setVisibleItems({
+          badge: false,
+          name: false,
+          details: Array(6).fill(false),
+        });
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCertificate]);
 
   // Staggered animation effect when result is set
@@ -147,7 +207,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
       return;
     }
 
-    // Reset and start animations
+    // Reset and start animations immediately
     setVisibleItems({
       badge: false,
       name: false,
@@ -155,45 +215,51 @@ const VerifyCertificate = ({ initialCertificate }) => {
     });
 
     const timeouts = [];
+    let rafId = null;
 
-    // Badge appears first
-    timeouts.push(
-      setTimeout(() => {
-        setVisibleItems((prev) => ({ ...prev, badge: true }));
-      }, 0)
-    );
-
-    // Name appears after 1 second
-    timeouts.push(
-      setTimeout(() => {
-        setVisibleItems((prev) => ({ ...prev, name: true }));
-      }, 1000)
-    );
-
-    // Details appear one by one with 1-second gaps
-    const detailFields = [
-      'certificate_no',
-      'email',
-      'mode',
-      'location_or_institution',
-      'date_issued',
-      'issued_by',
-    ];
-    detailFields.forEach((_, index) => {
+    // Use requestAnimationFrame to ensure DOM is ready
+    rafId = requestAnimationFrame(() => {
+      // Badge appears first (immediately after render)
       timeouts.push(
         setTimeout(() => {
-          setVisibleItems((prev) => {
-            const newDetails = [...prev.details];
-            newDetails[index] = true;
-            return { ...prev, details: newDetails };
-          });
-        }, 2000 + index * 1000)
+          setVisibleItems((prev) => ({ ...prev, badge: true }));
+        }, 50)
       );
+
+      // Name appears after 1 second
+      timeouts.push(
+        setTimeout(() => {
+          setVisibleItems((prev) => ({ ...prev, name: true }));
+        }, 1000)
+      );
+
+      // Details appear one by one with 1-second gaps
+      const detailFields = [
+        'certificate_no',
+        'email',
+        'mode',
+        'location_or_institution',
+        'date_issued',
+        'issued_by',
+      ];
+      detailFields.forEach((_, index) => {
+        timeouts.push(
+          setTimeout(() => {
+            setVisibleItems((prev) => {
+              const newDetails = [...prev.details];
+              newDetails[index] = true;
+              return { ...prev, details: newDetails };
+            });
+          }, 2000 + index * 1000)
+        );
+      });
     });
 
-
-    // Cleanup function to clear timeouts
+    // Cleanup function
     return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
       timeouts.forEach((timeout) => clearTimeout(timeout));
     };
   }, [result]);
@@ -230,7 +296,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
                 onChange={(event) =>
                   setCertificateNumber(toCanonicalCertificate(event.target.value))
                 }
-                placeholder="e.g. DARE/AIR/LP/25-26-001"
+                placeholder="e.g. DARE/AIR/LP/25-26/001"
                 className="w-full rounded-xl border-2 border-slate-200 bg-white pl-10 pr-3 py-3 text-sm font-semibold uppercase tracking-wide text-dark shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-primary focus:shadow-lg focus:shadow-primary/10 focus:ring-2 focus:ring-primary/10 sm:rounded-2xl sm:pl-12 sm:pr-4 sm:py-4 sm:text-base"
               />
             </div>

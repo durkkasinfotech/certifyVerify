@@ -9,7 +9,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Verify />} />
-        <Route path="/verify/:certificateNo?" element={<Verify />} />
+        <Route path="/verify/*" element={<Verify />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/admin"

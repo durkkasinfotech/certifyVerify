@@ -1,17 +1,10 @@
 import * as XLSX from 'xlsx';
 
-const EXPECTED_HEADERS = [
-  'sno',
-  'roll_no',
-  'name',
-  'phone',
-  'email',
-  'date_issued',
-  'issued_by',
-  'mode',
-  'location_or_institution',
-  'certificate_no',
-];
+// Required headers for parsing
+const REQUIRED_HEADERS = ['name', 'date_issued'];
+
+// All possible headers (flexible parsing) - for reference only
+// The parser will handle various header name variations
 
 const normaliseHeader = (value) =>
   `${value}`.trim().toLowerCase().replace(/\s+/g, '_');
@@ -35,7 +28,9 @@ export const parseExcelFile = (file) =>
         const [headerRow, ...rows] = json;
         const normalizedHeaders = headerRow.map(normaliseHeader);
 
-        const missingHeaders = EXPECTED_HEADERS.filter(
+        // Check for required headers
+        const normalizedRequired = REQUIRED_HEADERS.map(normaliseHeader);
+        const missingHeaders = normalizedRequired.filter(
           (header) => !normalizedHeaders.includes(header)
         );
 
@@ -52,25 +47,37 @@ export const parseExcelFile = (file) =>
           normalizedHeaders.map((header, index) => [header, index])
         );
 
+        // Helper to get value with multiple possible header names
+        const getValueByAliases = (row, aliases) => {
+          for (const alias of aliases) {
+            const index = headerIndex[alias];
+            if (index !== undefined && row[index] !== undefined && row[index] !== '') {
+              const cell = row[index];
+              return typeof cell === 'string' ? cell.trim() : cell;
+            }
+          }
+          return '';
+        };
+
         const parsedRows = rows
           .filter((row) => row.some((cell) => `${cell}`.trim() !== ''))
           .map((row, index) => {
-            const getValue = (header) => {
-              const cell = row[headerIndex[header]];
-              return typeof cell === 'string' ? cell.trim() : cell;
-            };
-
             return {
-              sno: getValue('sno') || index + 1,
-              roll_no: getValue('roll_no'),
-              name: getValue('name'),
-              phone: `${getValue('phone') ?? ''}`.trim(),
-              email: `${getValue('email') ?? ''}`.toLowerCase(),
-              date_issued_raw: getValue('date_issued'),
-              issued_by: getValue('issued_by'),
-              mode: getValue('mode'),
-              location_or_institution: getValue('location_or_institution'),
-              certificate_no_raw: getValue('certificate_no'),
+              sno: getValueByAliases(row, ['s_no', 'sno']) || index + 1,
+              roll_no: getValueByAliases(row, ['roll_no', 'roll_no']),
+              name: getValueByAliases(row, ['name']),
+              department: getValueByAliases(row, ['dep', 'department']),
+              academic_year: getValueByAliases(row, ['year', 'academic_year']),
+              location_or_institution: getValueByAliases(row, ['ins', 'location_or_institution']),
+              location: getValueByAliases(row, ['location']),
+              phone: `${getValueByAliases(row, ['phone_number', 'phone']) ?? ''}`.trim(),
+              certificate_no_raw: getValueByAliases(row, ['certificate_number', 'certificate_no']),
+              mode: getValueByAliases(row, ['mode']),
+              issued_by: getValueByAliases(row, ['issued_by']),
+              qr_code_url: getValueByAliases(row, ['qr_url', 'qr_code_url']),
+              created_at: getValueByAliases(row, ['create_date', 'created_at']),
+              email: `${getValueByAliases(row, ['email']) ?? ''}`.toLowerCase(),
+              date_issued_raw: getValueByAliases(row, ['date_issued']),
             };
           });
 

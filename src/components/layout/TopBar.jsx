@@ -31,11 +31,11 @@ const TopBar = () => (
     <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
         <a
-          href="tel:+919080587177"
+          href="tel:+917812876787"
           className="inline-flex items-center gap-2 text-white transition hover:text-secondary"
         >
           <i className="fa fa-phone-alt" aria-hidden="true" />
-          <span>+91 9080587177</span>
+          <span>+91 7812876787</span>
         </a>
         <span className="hidden text-white md:inline">|</span>
         <a

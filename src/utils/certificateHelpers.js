@@ -84,32 +84,46 @@ export const getAcademicYearSegment = (date) => {
 };
 
 export const extractSequenceNumber = (certificateNo) => {
-  const match = certificateNo?.match(/(\d{2}-\d{2})-(\d{3,})$/);
+  if (!certificateNo) return 0;
+  // Handle both formats: 25-26/001 (slash) or 25-26-001 (hyphen)
+  const match = certificateNo.match(/(\d{2}-\d{2})[\/-](\d{3,})$/);
   if (!match) return 0;
   return Number.parseInt(match[2], 10) || 0;
 };
 
 export const makeCertificateNumber = (sequence, yearSegment, prefix = DEFAULT_PREFIX) => {
   const seq = `${sequence}`.padStart(3, '0');
-  return `${prefix}/${yearSegment}-${seq}`;
+  return `${prefix}/${yearSegment}/${seq}`;
 };
 
 export const getNextSequence = async ({ prefix = DEFAULT_PREFIX, yearSegment }) => {
   if (!supabase) {
     throw new Error('Supabase client is not configured.');
   }
-  const likePattern = `${prefix}/${yearSegment}-%`;
-  const { data, error } = await supabase
-    .from('certificates')
-    .select('certificate_no')
-    .like('certificate_no', likePattern);
+  // Query for both formats: with slash (25-26/001) and hyphen (25-26-001) for backward compatibility
+  const likePatternSlash = `${prefix}/${yearSegment}/%`;
+  const likePatternHyphen = `${prefix}/${yearSegment}-%`;
+  
+  const [resultSlash, resultHyphen] = await Promise.all([
+    supabase.from('certificates').select('certificate_no').like('certificate_no', likePatternSlash),
+    supabase.from('certificates').select('certificate_no').like('certificate_no', likePatternHyphen),
+  ]);
 
-  if (error) {
-    throw error;
+  if (resultSlash.error) {
+    throw resultSlash.error;
+  }
+  if (resultHyphen.error) {
+    throw resultHyphen.error;
   }
 
-  const maxSequence = data
-    ?.map((row) => extractSequenceNumber(row.certificate_no))
+  // Combine results from both queries
+  const allCertificates = [
+    ...(resultSlash.data || []),
+    ...(resultHyphen.data || []),
+  ];
+
+  const maxSequence = allCertificates
+    .map((row) => extractSequenceNumber(row.certificate_no))
     .reduce((acc, value) => Math.max(acc, value), 0) ?? 0;
 
   return maxSequence + 1;

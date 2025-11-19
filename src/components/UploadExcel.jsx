@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { parseExcelFile } from '../utils/excelParser';
 import {
   buildQrCodeUrl,
@@ -17,9 +18,51 @@ const UploadExcel = ({ onUploadComplete }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const fileInputRef = useRef(null);
 
   const totalRows = rows.length;
   const supabaseConfigured = useMemo(() => Boolean(supabase), []);
+
+  const downloadSampleExcel = () => {
+    // Column order: S.No, Roll No, Name, Email, Dep, Year, Ins, Location, Phone Number, Certificate Number, Mode, Issued By, Date Issued, QR_URL, Create Date
+    const headers = ['S.No', 'Roll No', 'Name', 'Email', 'Dep', 'Year', 'Ins', 'Location', 'Phone Number', 'Certificate Number', 'Mode', 'Issued By', 'Date Issued', 'QR_URL', 'Create Date'];
+    
+    // Sample data rows with "sample excel" text
+    const sampleData = [
+      headers,
+      [1, '25001', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', '2025-10-31', 'sample excel', '2025-11-12 10:40:57.200735+00'],
+      [2, '25002', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', '2025-10-31', 'sample excel', '2025-11-12 10:40:57.200735+00'],
+    ];
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(sampleData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 8 },  // S.No
+      { wch: 12 }, // Roll No
+      { wch: 20 }, // Name
+      { wch: 30 }, // Email
+      { wch: 12 }, // Dep
+      { wch: 12 }, // Year
+      { wch: 40 }, // Ins
+      { wch: 40 }, // Location
+      { wch: 15 }, // Phone Number
+      { wch: 25 }, // Certificate Number
+      { wch: 12 }, // Mode
+      { wch: 15 }, // Issued By
+      { wch: 15 }, // Date Issued
+      { wch: 50 }, // QR_URL
+      { wch: 25 }, // Create Date
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Certificates');
+
+    // Generate Excel file and download
+    XLSX.writeFile(wb, 'certificate_sample.xlsx');
+  };
 
   const parsedSummary = useMemo(() => {
     if (!totalRows) {
@@ -60,6 +103,17 @@ const UploadExcel = ({ onUploadComplete }) => {
       setError(err.message ?? 'Unable to read the selected file.');
     } finally {
       setIsParsing(false);
+    }
+  };
+
+  const handleClearFile = () => {
+    setFileName('');
+    setRows([]);
+    setError('');
+    setSuccessMessage('');
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -113,14 +167,18 @@ const UploadExcel = ({ onUploadComplete }) => {
           sno: row.sno ?? null,
           roll_no: toNullIfEmpty(row.roll_no),
           name: `${row.name}`.trim(),
+          department: toNullIfEmpty(row.department),
+          academic_year: toNullIfEmpty(row.academic_year) || academicYear,
+          location_or_institution: toNullIfEmpty(row.location_or_institution),
+          location: toNullIfEmpty(row.location),
           phone: toNullIfEmpty(row.phone),
+          certificate_no: certificateNo,
+          mode: toNullIfEmpty(row.mode),
+          issued_by: toNullIfEmpty(row.issued_by),
           email: toNullIfEmpty(row.email),
           date_issued: formatDateForDb(issuedDate),
-          issued_by: toNullIfEmpty(row.issued_by),
-          mode: toNullIfEmpty(row.mode),
-          location_or_institution: toNullIfEmpty(row.location_or_institution),
-          certificate_no: certificateNo,
-          qr_code_url: buildQrCodeUrl(certificateNo),
+          qr_code_url: row.qr_code_url || buildQrCodeUrl(certificateNo),
+          created_at: row.created_at || null,
         });
       }
 
@@ -154,23 +212,38 @@ const UploadExcel = ({ onUploadComplete }) => {
             Upload Excel
           </p>
           <h2 className="mt-1 font-heading text-xl text-dark sm:text-2xl md:text-[28px]">Bulk Certificate Import</h2>
-          <p className="mt-1 max-w-2xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
-            Upload an Excel sheet with columns:{' '}
-            <code className="font-mono text-[10px] sm:text-xs">sno, roll_no, name, phone, email, date_issued,
-            issued_by, mode, location_or_institution, certificate_no</code>.
-          </p>
         </div>
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 sm:gap-3 sm:px-5 sm:py-3 sm:text-sm">
-          <i className="fa fa-file-upload" aria-hidden="true" />
-          <span>Select File</span>
-          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
-        </label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={downloadSampleExcel}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-secondary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-secondary/90 sm:gap-3 sm:px-5 sm:py-3 sm:text-sm"
+          >
+            <i className="fa fa-download" aria-hidden="true" />
+            <span>Download Sample Excel File</span>
+          </button>
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 sm:gap-3 sm:px-5 sm:py-3 sm:text-sm">
+            <i className="fa fa-file-upload" aria-hidden="true" />
+            <span>Select File</span>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileChange} />
+          </label>
+        </div>
       </header>
 
       {fileName ? (
-        <div className="mb-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm text-primary">
-          <i className="fa fa-file-excel mr-2" aria-hidden="true" />
-          <span>{fileName}</span>
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm text-primary">
+          <div className="flex items-center gap-2">
+            <i className="fa fa-file-excel" aria-hidden="true" />
+            <span className="truncate">{fileName}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearFile}
+            className="ml-2 flex-shrink-0 rounded-full p-1.5 text-primary transition hover:bg-primary/20"
+            aria-label="Remove file"
+          >
+            <i className="fa fa-times text-sm" aria-hidden="true" />
+          </button>
         </div>
       ) : null}
 

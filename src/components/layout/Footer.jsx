@@ -40,7 +40,7 @@ const Footer = () => (
           <ul className="mt-3 space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <i className="fa fa-phone mt-0.5 text-secondary" aria-hidden="true" />
-              <span>+91 9080587177</span>
+              <span>+91 7812876787</span>
             </li>
             <li className="flex items-start gap-2">
               <i className="fa fa-envelope mt-0.5 text-secondary" aria-hidden="true" />
@@ -86,8 +86,15 @@ const Footer = () => (
           </div>
         </div>
       </div>
-      <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/70">
-        &copy; {new Date().getFullYear()} Dare Centre. All Rights Reserved.
+      <div className="mt-10 border-t border-white/10 pt-6">
+        <div className="text-center mb-4">
+          <p className="text-sm sm:text-base md:text-lg font-semibold text-primary italic">
+            May this certificate guide you to greater success.
+          </p>
+        </div>
+        <div className="text-center text-xs text-white/70">
+          &copy; {new Date().getFullYear()} Dare Centre. All Rights Reserved.
+        </div>
       </div>
     </div>
   </footer>

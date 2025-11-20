@@ -22,23 +22,44 @@ export async function generateCertificatePDF(studentData, certificateNo = null) 
         const finalCertNo = certificateNo || await generateCertificateNumber(studentData);
 
         // 1. Load the template
-        const templateBytes = await fetch(certificateConfig.templatePath).then(async (res) => {
+        // URL encode the path to handle spaces and special characters (important for Vercel/production)
+        const templatePath = encodeURI(certificateConfig.templatePath);
+        
+        const templateBytes = await fetch(templatePath).then(async (res) => {
             if (!res.ok) {
+                // Try to get more info about the error
+                let errorText = '';
+                try {
+                    errorText = await res.text();
+                } catch (e) {
+                    // Ignore if can't read error text
+                }
+                
                 throw new Error(
                     `Failed to load PDF template from ${certificateConfig.templatePath}. ` +
                     `Status: ${res.status} ${res.statusText}. ` +
-                    `Make sure the template file exists in public/templates/ folder.`
+                    (res.status === 404 ? `\nFile not found. Make sure the template file exists in public/templates/ folder. ` : '') +
+                    (errorText.includes('<html') ? `\nGot HTML response (404 page). The file might not be deployed to production or path is incorrect. ` : '') +
+                    `\nTried path: ${templatePath}`
                 );
             }
             
             // Check if response is actually a PDF
             const contentType = res.headers.get('content-type');
             if (contentType && !contentType.includes('application/pdf')) {
-                const text = await res.text();
+                let errorText = '';
+                try {
+                    errorText = await res.text();
+                } catch (e) {
+                    // Ignore if can't read error text
+                }
+                
                 throw new Error(
                     `Expected PDF file but got ${contentType}. ` +
                     `The file at ${certificateConfig.templatePath} might not exist or is not a valid PDF. ` +
-                    `Available files in public/templates/: testing.pdf, SLCS Certifi final (1).pdf`
+                    (errorText.includes('<html') ? `\nGot HTML response (404 page). The file might not be deployed to production. ` : '') +
+                    `Available files in public/templates/: testing.pdf, SLCS Certifi final (1).pdf, SLCS Certifi final (2).pdf` +
+                    `\nTried path: ${templatePath}`
                 );
             }
             
@@ -52,7 +73,8 @@ export async function generateCertificatePDF(studentData, certificateNo = null) 
                     `Invalid PDF file: The file at ${certificateConfig.templatePath} is not a valid PDF. ` +
                     `PDF files should start with "%PDF". ` +
                     `Make sure the file exists and is not corrupted. ` +
-                    `Available files in public/templates/: testing.pdf, SLCS Certifi final (1).pdf`
+                    `Available files in public/templates/: testing.pdf, SLCS Certifi final (1).pdf, SLCS Certifi final (2).pdf` +
+                    `\nTried path: ${templatePath}`
                 );
             }
             

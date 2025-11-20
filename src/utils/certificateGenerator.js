@@ -70,10 +70,13 @@ export async function generateCertificatePDF(studentData, certificateNo = null) 
             const uint8Array = new Uint8Array(arrayBuffer);
             const header = String.fromCharCode(...uint8Array.slice(0, 4));
             if (header !== '%PDF') {
+                // If we got HTML or invalid content, log the first few bytes for debugging
+                const preview = String.fromCharCode(...uint8Array.slice(0, 100));
                 throw new Error(
                     `Invalid PDF file: The file at ${certificateConfig.templatePath} is not a valid PDF. ` +
                     `PDF files should start with "%PDF". ` +
-                    `Make sure the file exists and is not corrupted. ` +
+                    `Got: "${preview.substring(0, 50)}..." ` +
+                    `\nThis might be an HTML 404 page. Make sure the file exists in public/templates/ and is deployed to production. ` +
                     `Available files in public/templates/: certificate-template.pdf, testing.pdf` +
                     `\nTried path: ${templatePath}`
                 );

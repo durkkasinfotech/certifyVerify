@@ -22,11 +22,21 @@ export async function generateCertificatePDF(studentData, certificateNo = null) 
         const finalCertNo = certificateNo || await generateCertificateNumber(studentData);
 
         // 1. Load the template
-        // Use the path directly (no spaces in filename for production compatibility)
-        // Vercel handles paths better without spaces and special characters
-        const templatePath = certificateConfig.templatePath;
+        // Use absolute URL in production to ensure proper static file serving
+        // In development, use relative path; in production, use full URL
+        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const baseUrl = isProduction ? window.location.origin : '';
+        const templatePath = `${baseUrl}${certificateConfig.templatePath}`;
         
-        const templateBytes = await fetch(templatePath).then(async (res) => {
+        console.log('Loading PDF template from:', templatePath);
+        
+        const templateBytes = await fetch(templatePath, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/pdf'
+            },
+            cache: 'default'
+        }).then(async (res) => {
             if (!res.ok) {
                 // Try to get more info about the error
                 let errorText = '';

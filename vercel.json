@@ -6,7 +6,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!templates|assets|data).*)",
       "destination": "/index.html"
     }
   ],
@@ -24,8 +24,30 @@
       "source": "/templates/(.*)",
       "headers": [
         {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/templates/(.*\\.pdf)",
+      "headers": [
+        {
           "key": "Content-Type",
           "value": "application/pdf"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/templates/(.*\\.png)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "image/png"
         },
         {
           "key": "Cache-Control",

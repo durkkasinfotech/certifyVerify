@@ -14,8 +14,10 @@ node_modules
 /certificates
 *.pdf
 
-# Allow PDF templates in public folder (required for production)
+# Allow PDF files in templates folders (required for production and templates)
+!**/templates/*.pdf
 !public/templates/*.pdf
+!src/templates/*.pdf
 
 # Misc
 .DS_Store

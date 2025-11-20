@@ -24,14 +24,15 @@ const UploadExcel = ({ onUploadComplete }) => {
   const supabaseConfigured = useMemo(() => Boolean(supabase), []);
 
   const downloadSampleExcel = () => {
-    // Column order: S.No, Roll No, Name, Email, Dep, Year, Ins, Location, Phone Number, Certificate Number, Mode, Issued By, Date Issued, QR_URL, Create Date
-    const headers = ['S.No', 'Roll No', 'Name', 'Email', 'Dep', 'Year', 'Ins', 'Location', 'Phone Number', 'Certificate Number', 'Mode', 'Issued By', 'Date Issued', 'QR_URL', 'Create Date'];
-    
-    // Sample data rows with "sample excel" text
+    // Column order: S.No, Roll No, Name, Email, Dep, Year, Course Name, Ins, Location, Phone Number, Certificate Number, Mode, Issued By, Date Issued, QR_URL
+    const headers = ['S.No', 'Roll No', 'Name', 'Email', 'Dep', 'Year', 'Course Name', 'Ins', 'Location', 'Phone Number', 'Certificate Number', 'Mode', 'Issued By', 'Date Issued', 'QR_URL'];
+
+    // Sample data rows - 3rd row has empty name to test validation
     const sampleData = [
       headers,
-      [1, '25001', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', '2025-10-31', 'sample excel', '2025-11-12 10:40:57.200735+00'],
-      [2, '25002', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', 'sample excel', '2025-10-31', 'sample excel', '2025-11-12 10:40:57.200735+00'],
+      [1, 'DC2025001', 'Rajesh Kumar', 'rajesh.kumar@example.com', 'B.B.A', '2025-2028', 'AI-Powered Logistics Practitioner - Foundation Level', 'Dare Centre Institute of Excellence', 'Chennai, Tamil Nadu', '9876543210', '', 'Online', 'Dr. Suresh Babu', '2025-01-15', ''],
+      [2, 'DC2025002', 'Priya Sharma', 'priya.sharma@example.com', 'B.Com', '2025-2028', 'AI-Powered Logistics Practitioner - Foundation Level', 'Dare Centre Institute of Excellence', 'Coimbatore, Tamil Nadu', '9876543211', '', 'Offline', 'Dr. Suresh Babu', '2025-01-15', ''],
+      [3, 'DC2025003', '', 'arun.prakash@example.com', 'B.B.A', '2025-2028', 'AI-Powered Logistics Practitioner - Foundation Level', 'Dare Centre Institute of Excellence', 'Madurai, Tamil Nadu', '9876543212', '', 'Online', 'Dr. Suresh Babu', '2025-01-20', ''],
     ];
 
     // Create workbook and worksheet
@@ -46,6 +47,7 @@ const UploadExcel = ({ onUploadComplete }) => {
       { wch: 30 }, // Email
       { wch: 12 }, // Dep
       { wch: 12 }, // Year
+      { wch: 50 }, // Course Name
       { wch: 40 }, // Ins
       { wch: 40 }, // Location
       { wch: 15 }, // Phone Number
@@ -54,7 +56,6 @@ const UploadExcel = ({ onUploadComplete }) => {
       { wch: 15 }, // Issued By
       { wch: 15 }, // Date Issued
       { wch: 50 }, // QR_URL
-      { wch: 25 }, // Create Date
     ];
 
     // Add worksheet to workbook
@@ -129,6 +130,66 @@ const UploadExcel = ({ onUploadComplete }) => {
     setSuccessMessage('');
 
     try {
+      // Validate all required fields before processing
+      const requiredFields = [
+        { key: 'name', label: 'Name' },
+        { key: 'roll_no', label: 'Roll No' },
+        { key: 'email', label: 'Email' },
+        { key: 'phone', label: 'Phone Number' },
+        { key: 'department', label: 'Department (Dep)' },
+        { key: 'academic_year', label: 'Academic Year (Year)' },
+        { key: 'location_or_institution', label: 'Institution (Ins)' },
+        { key: 'location', label: 'Location' },
+        { key: 'mode', label: 'Mode' },
+        { key: 'issued_by', label: 'Issued By' },
+        { key: 'date_issued_raw', label: 'Date Issued' },
+      ];
+
+      // Check each row for empty required fields
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNumber = i + 1;
+
+        // Check each required field
+        for (const field of requiredFields) {
+          const value = row[field.key];
+          const isEmpty = !value || `${value}`.trim() === '';
+
+          if (isEmpty) {
+            throw new Error(
+              `Row ${rowNumber}: "${field.label}" is required and cannot be empty. ` +
+              `Please fill all required fields in the Excel file.`
+            );
+          }
+        }
+
+        // Validate date format
+        const issuedDate = normalizeDate(row.date_issued_raw);
+        if (!issuedDate) {
+          throw new Error(
+            `Row ${rowNumber}: Invalid date format for "Date Issued". ` +
+            `Please ensure the date is in a valid format (e.g., DD/MM/YYYY or YYYY-MM-DD).`
+          );
+        }
+
+        // Validate email format
+        if (row.email && !row.email.includes('@')) {
+          throw new Error(
+            `Row ${rowNumber}: Invalid email format. Email must contain "@" symbol.`
+          );
+        }
+
+        // Validate phone number (10 digits)
+        if (row.phone) {
+          const phoneDigits = row.phone.replace(/\D/g, '');
+          if (phoneDigits.length !== 10) {
+            throw new Error(
+              `Row ${rowNumber}: Phone number must be exactly 10 digits.`
+            );
+          }
+        }
+      }
+
       const cache = new Map();
       const payload = [];
 
@@ -137,7 +198,7 @@ const UploadExcel = ({ onUploadComplete }) => {
         if (!issuedDate) {
           throw new Error(
             `Unable to parse the issued date for ${row.name || 'one of the rows'}. ` +
-              'Please ensure the "date_issued" column contains valid dates.'
+            'Please ensure the "date_issued" column contains valid dates.'
           );
         }
 
@@ -165,20 +226,21 @@ const UploadExcel = ({ onUploadComplete }) => {
 
         payload.push({
           sno: row.sno ?? null,
-          roll_no: toNullIfEmpty(row.roll_no),
+          roll_no: `${row.roll_no}`.trim(),
           name: `${row.name}`.trim(),
-          department: toNullIfEmpty(row.department),
-          academic_year: toNullIfEmpty(row.academic_year) || academicYear,
-          location_or_institution: toNullIfEmpty(row.location_or_institution),
-          location: toNullIfEmpty(row.location),
-          phone: toNullIfEmpty(row.phone),
+          department: `${row.department}`.trim(),
+          academic_year: `${row.academic_year}`.trim() || academicYear,
+          course_name: toNullIfEmpty(row.course_name) || 'AI-Powered Logistics Practitioner - Foundation Level',
+          location_or_institution: `${row.location_or_institution}`.trim(),
+          location: `${row.location}`.trim(),
+          phone: `${row.phone}`.trim(),
           certificate_no: certificateNo,
-          mode: toNullIfEmpty(row.mode),
-          issued_by: toNullIfEmpty(row.issued_by),
-          email: toNullIfEmpty(row.email),
+          mode: `${row.mode}`.trim(),
+          issued_by: `${row.issued_by}`.trim(),
+          email: `${row.email}`.trim().toLowerCase(),
           date_issued: formatDateForDb(issuedDate),
           qr_code_url: row.qr_code_url || buildQrCodeUrl(certificateNo),
-          created_at: row.created_at || null,
+          // created_at will use database default: timezone('utc', now())
         });
       }
 

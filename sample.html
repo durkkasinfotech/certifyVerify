@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Completion</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Roboto:wght@300;400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .certificate-container {
+            width: 210mm;
+            height: 297mm;
+            background: #1a237e;
+            padding: 15px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .certificate-inner {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border: 8px solid #d4af37;
+            position: relative;
+            padding: 30px;
+        }
+        
+        .decorative-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(26, 35, 126, 0.1) 10px, rgba(26, 35, 126, 0.1) 20px),
+                repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(212, 175, 55, 0.1) 10px, rgba(212, 175, 55, 0.1) 20px);
+            pointer-events: none;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo-left {
+            flex: 0 0 120px;
+        }
+        
+        .logo-left .dare-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 900;
+            color: #1a237e;
+            line-height: 1.2;
+        }
+        
+        .logo-left .dare-logo .dare {
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+        
+        .logo-left .dare-logo .centre {
+            font-size: 14px;
+            font-weight: 400;
+            margin-top: -5px;
+        }
+        
+        .logo-left .tagline {
+            font-size: 7px;
+            color: #666;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+        
+        .logo-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .logo-center .academy-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a237e;
+            margin-bottom: 3px;
+        }
+        
+        .logo-center .accreditation {
+            font-size: 9px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .logo-right {
+            flex: 0 0 80px;
+            text-align: right;
+        }
+        
+        .logo-right .aicra-logo {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #1a237e;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: #1a237e;
+        }
+        
+        .main-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .certificate-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            font-weight: 900;
+            color: #1a237e;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .certify-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            color: #333;
+            font-style: italic;
+            margin-bottom: 25px;
+        }
+        
+        .recipient-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: #1a237e;
+            text-transform: uppercase;
+            margin: 20px 0;
+            letter-spacing: 2px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        .recipient-name::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #d4af37, transparent);
+        }
+        
+        .recipient-affiliation {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .program-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #d4af37;
+            margin: 25px 0 5px 0;
+        }
+        
+        .program-alignment {
+            font-family: 'Playfair Display', serif;
+            font-size: 14px;
+            color: #d4af37;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+        
+        .program-details {
+            font-size: 13px;
+            color: #333;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+        }
+        
+        .certificate-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 40px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cert-id-section {
+            text-align: left;
+        }
+        
+        .cert-id-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .cert-id-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a237e;
+            font-family: 'Roboto', monospace;
+        }
+        
+        .issued-date {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .director-section {
+            text-align: right;
+            margin-top: 80px;
+        }
+        
+        .director-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .director-role {
+            font-size: 11px;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .director-company {
+            font-size: 11px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .signature-space {
+            height: 50px;
+            margin-bottom: 10px;
+        }
+        
+        .qr-code-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .qr-code-placeholder {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #333;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+            font-size: 10px;
+            color: #999;
+        }
+        
+        .footer-logos {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .footer-logo-left {
+            font-size: 10px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .footer-logo-right {
+            font-size: 9px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .certificate-container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate-container">
+        <div class="certificate-inner">
+            <div class="decorative-pattern"></div>
+            
+            <!-- Header Section -->
+            <div class="header">
+                <div class="logo-left">
+                    <div class="dare-logo">
+                        <div class="dare">DARE</div>
+                        <div class="centre">CENTRE</div>
+                    </div>
+                    <div class="tagline">EXPLORE DISCOVER INVENT CREATE</div>
+                </div>
+                
+                <div class="logo-center">
+                    <div class="academy-name">DURKKAS ACADEMY OF RESEARCH AND EDUCATION</div>
+                    <div class="accreditation">(Accredited by All India Council of Robotics & Automation)</div>
+                </div>
+                
+                <div class="logo-right">
+                    <div class="aicra-logo">AICRA</div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="main-content">
+                <div class="certificate-title">Certificate of Completion</div>
+                
+                <div class="certify-text">This is to certify that</div>
+                
+                <div class="recipient-name">DHARSHINI S</div>
+                
+                <div class="recipient-affiliation">
+                    of Subbalakshmi Lakshmipathy College of Science, Madurai
+                </div>
+                
+                <div class="program-title">
+                    AI-Powered Logistics Practitioner-Foundation Level
+                </div>
+                
+                <div class="program-alignment">
+                    (aligned with Durkkas Business Framework)
+                </div>
+                
+                <div class="program-details">
+                    conducted by Durkkas Academy of Research and Education from 23rd - 29th Oct 2025, 
+                    comprising 30 Hours of Intensive Learning and hands-on practice on AI Implementation 
+                    in Logistics Business.
+                </div>
+            </div>
+            
+            <!-- Certificate Info Section -->
+            <div class="certificate-info">
+                <div class="cert-id-section">
+                    <div class="cert-id-label">Certificate ID:</div>
+                    <div class="cert-id-value">DARE/AIR/LP/25-26/001</div>
+                    <div class="issued-date">Issued on: 31.10.2025</div>
+                </div>
+                
+                <div class="director-section">
+                    <div class="signature-space"></div>
+                    <div class="director-title">Director</div>
+                    <div class="director-role">Education & Training</div>
+                    <div class="director-company">Durkkas Innovations Pvt. Ltd</div>
+                </div>
+            </div>
+            
+            <!-- QR Code Section -->
+            <div class="qr-code-section">
+                <div class="qr-code-placeholder">
+                    QR CODE
+                </div>
+            </div>
+            
+            <!-- Footer Logos -->
+            <div class="footer-logos">
+                <div class="footer-logo-left">INITIATIVE BY DURKKAS</div>
+                <div class="footer-logo-right">ISO 9001:2015 Certified</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

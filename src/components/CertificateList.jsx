@@ -11,6 +11,7 @@ import { extractSequenceNumber } from '../utils/certificateHelpers';
 const columns = [
   { key: 'certificate_no', label: 'Certificate Number' },
   { key: 'name', label: 'Name' },
+  { key: 'course_name', label: 'Course Name' },
   { key: 'date_issued', label: 'Date Issued' },
   { key: 'mode', label: 'Mode' },
 ];
@@ -22,6 +23,7 @@ const filterRecords = (records, query) => {
     [
       record.certificate_no,
       record.name,
+      record.course_name,
       record.date_issued,
       record.mode,
     ]
@@ -36,6 +38,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
   const [columnFilters, setColumnFilters] = useState({
     certificate_no: '',
     name: '',
+    course_name: '',
     date_issued: '',
     mode: '',
   });
@@ -55,6 +58,8 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
           `${record.certificate_no ?? ''}`.toLowerCase().includes(columnFilters.certificate_no.toLowerCase())) &&
         (!columnFilters.name ||
           `${record.name ?? ''}`.toLowerCase().includes(columnFilters.name.toLowerCase())) &&
+        (!columnFilters.course_name ||
+          `${record.course_name ?? ''}`.toLowerCase().includes(columnFilters.course_name.toLowerCase())) &&
         (!columnFilters.date_issued ||
           `${record.date_issued ?? ''}`.toLowerCase().includes(columnFilters.date_issued.toLowerCase())) &&
         (!columnFilters.mode ||
@@ -86,6 +91,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
     setColumnFilters({
       certificate_no: '',
       name: '',
+      course_name: '',
       date_issued: '',
       mode: '',
     });
@@ -228,7 +234,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
 
     const name = sanitizeFileName(record.name);
     const rollNo = sanitizeFileName(record.roll_no);
-    
+
     // Build filename with name and registration number
     let filename = record.certificate_no;
     if (name) {

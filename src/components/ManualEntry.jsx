@@ -18,6 +18,7 @@ const ManualEntry = ({ onUploadComplete }) => {
     name: '',
     department: '',
     academic_year: '',
+    course_name: 'AI-Powered Logistics Practitioner - Foundation Level',
     location_or_institution: '',
     location: '',
     phone: '',
@@ -54,6 +55,7 @@ const ManualEntry = ({ onUploadComplete }) => {
       name: '',
       department: '',
       academic_year: '',
+      course_name: 'AI-Powered Logistics Practitioner - Foundation Level',
       location_or_institution: '',
       location: '',
       phone: '',
@@ -78,7 +80,7 @@ const ManualEntry = ({ onUploadComplete }) => {
     setEntry({ ...entry, [field]: value });
     setError('');
     setSuccessMessage('');
-    
+
     // Validate email in real-time
     if (field === 'email') {
       if (value && !validateEmail(value)) {
@@ -107,18 +109,57 @@ const ManualEntry = ({ onUploadComplete }) => {
       return;
     }
 
-    // Validate required fields
+    // Validate all required fields
     if (!entry.name?.trim()) {
       setError('Name is required.');
       return;
     }
-    if (!entry.date_issued?.trim()) {
-      setError('Date issued is required.');
+    if (!entry.roll_no?.trim()) {
+      setError('Roll No is required.');
       return;
     }
-    // Validate email if provided
-    if (entry.email?.trim() && !validateEmail(entry.email)) {
+    if (!entry.email?.trim()) {
+      setError('Email is required.');
+      return;
+    }
+    if (!validateEmail(entry.email)) {
       setError('Please enter a valid email address with @ symbol (e.g., user@example.com)');
+      return;
+    }
+    if (!entry.department?.trim()) {
+      setError('Department (Dep) is required.');
+      return;
+    }
+    if (!entry.academic_year?.trim()) {
+      setError('Academic Year (Year) is required.');
+      return;
+    }
+    if (!entry.location_or_institution?.trim()) {
+      setError('Institution (Ins) is required.');
+      return;
+    }
+    if (!entry.location?.trim()) {
+      setError('Location is required.');
+      return;
+    }
+    if (!entry.phone?.trim()) {
+      setError('Phone Number is required.');
+      return;
+    }
+    if (entry.phone.replace(/\D/g, '').length !== 10) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+    if (!entry.mode?.trim()) {
+      setError('Mode is required. Please select Online or Offline.');
+      return;
+    }
+    if (!entry.issued_by?.trim()) {
+      setError('Issued By is required.');
+      return;
+    }
+    if (!entry.date_issued?.trim()) {
+      setError('Date issued is required.');
       return;
     }
 
@@ -131,7 +172,7 @@ const ManualEntry = ({ onUploadComplete }) => {
       if (!issuedDate) {
         throw new Error(
           `Unable to parse the issued date. ` +
-            'Please enter a valid date (e.g., DD/MM/YYYY or YYYY-MM-DD).'
+          'Please enter a valid date (e.g., DD/MM/YYYY or YYYY-MM-DD).'
         );
       }
 
@@ -153,17 +194,18 @@ const ManualEntry = ({ onUploadComplete }) => {
 
       const payload = {
         sno: entry.sno ? Number.parseInt(entry.sno, 10) : null,
-        roll_no: toNullIfEmpty(entry.roll_no),
+        roll_no: entry.roll_no.trim(),
         name: entry.name.trim(),
-        department: toNullIfEmpty(entry.department),
-        academic_year: toNullIfEmpty(entry.academic_year) || academicYear,
-        location_or_institution: toNullIfEmpty(entry.location_or_institution),
-        location: toNullIfEmpty(entry.location),
-        phone: toNullIfEmpty(entry.phone),
+        department: entry.department.trim(),
+        academic_year: entry.academic_year.trim() || academicYear,
+        course_name: entry.course_name.trim() || 'AI-Powered Logistics Practitioner - Foundation Level',
+        location_or_institution: entry.location_or_institution.trim(),
+        location: entry.location.trim(),
+        phone: entry.phone.trim(),
         certificate_no: certificateNo,
-        mode: toNullIfEmpty(entry.mode),
-        issued_by: toNullIfEmpty(entry.issued_by),
-        email: toNullIfEmpty(entry.email),
+        mode: entry.mode.trim(),
+        issued_by: entry.issued_by.trim(),
+        email: entry.email.trim().toLowerCase(),
         date_issued: formatDateForDb(issuedDate),
         qr_code_url: buildQrCodeUrl(certificateNo),
       };
@@ -180,7 +222,7 @@ const ManualEntry = ({ onUploadComplete }) => {
       onUploadComplete?.();
       setSuccessMessage('Certificate record uploaded successfully!');
       setIsUploading(false);
-      
+
       // Show "Add Another" confirmation after a brief delay
       setTimeout(() => {
         setShowAddAnother(true);
@@ -309,7 +351,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                   {/* 2. Roll No */}
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
-                      Roll No
+                      Roll No <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -317,6 +359,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       onChange={(e) => handleInputChange('roll_no', e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter roll number"
+                      required
                       disabled={isUploading}
                     />
                   </div>
@@ -339,18 +382,20 @@ const ManualEntry = ({ onUploadComplete }) => {
 
                   {/* 4. Email */}
                   <div>
-                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">Email</label>
+                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
+                      Email <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="email"
                       value={entry.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$"
-                      className={`w-full rounded-lg border px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 ${
-                        emailError
+                      className={`w-full rounded-lg border px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 ${emailError
                           ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
                           : 'border-slate-300 focus:border-primary focus:ring-primary/20'
-                      }`}
+                        }`}
                       placeholder="Enter email with @ symbol"
+                      required
                       disabled={isUploading}
                     />
                     {emailError && (
@@ -364,7 +409,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                   {/* 5. Dep (Department) */}
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
-                      Dep (Department)
+                      Dep (Department) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -372,6 +417,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       onChange={(e) => handleInputChange('department', e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="e.g., B.B.A"
+                      required
                       disabled={isUploading}
                     />
                   </div>
@@ -379,7 +425,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                   {/* 5. Year (Academic Year) */}
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
-                      Year (Academic Year)
+                      Year (Academic Year) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -387,6 +433,22 @@ const ManualEntry = ({ onUploadComplete }) => {
                       onChange={(e) => handleInputChange('academic_year', e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="e.g., 2025-2028"
+                      required
+                      disabled={isUploading}
+                    />
+                  </div>
+
+                  {/* Course Name */}
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
+                      Course Name
+                    </label>
+                    <input
+                      type="text"
+                      value={entry.course_name}
+                      onChange={(e) => handleInputChange('course_name', e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      placeholder="e.g., AI-Powered Logistics Practitioner - Foundation Level"
                       disabled={isUploading}
                     />
                   </div>
@@ -394,7 +456,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                   {/* 6. Ins (Institution) */}
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
-                      Ins (Institution)
+                      Ins (Institution) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -402,6 +464,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       onChange={(e) => handleInputChange('location_or_institution', e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter institution name"
+                      required
                       disabled={isUploading}
                     />
                   </div>
@@ -409,7 +472,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                   {/* 7. Location */}
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
-                      Location
+                      Location <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -417,13 +480,16 @@ const ManualEntry = ({ onUploadComplete }) => {
                       onChange={(e) => handleInputChange('location', e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter location address"
+                      required
                       disabled={isUploading}
                     />
                   </div>
 
                   {/* 8. Phone Number */}
                   <div>
-                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">Phone Number</label>
+                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="tel"
                       value={entry.phone}
@@ -437,6 +503,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       maxLength={10}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter 10 digit phone number"
+                      required
                       disabled={isUploading}
                     />
                   </div>
@@ -457,7 +524,9 @@ const ManualEntry = ({ onUploadComplete }) => {
 
                   {/* 10. Mode */}
                   <div>
-                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">Mode</label>
+                    <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
+                      Mode <span className="text-red-500">*</span>
+                    </label>
                     <div className="flex gap-3 sm:gap-4">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -489,7 +558,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                   {/* 11. Issued By */}
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
-                      Issued By
+                      Issued By <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -497,6 +566,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       onChange={(e) => handleInputChange('issued_by', e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter issuer name"
+                      required
                       disabled={isUploading}
                     />
                   </div>
@@ -534,7 +604,7 @@ const ManualEntry = ({ onUploadComplete }) => {
               {!showAddAnother && (
                 <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-200 pt-4 sm:pt-6">
                   <p className="text-[10px] sm:text-xs text-slate-500 text-center sm:text-left">
-                    Fields marked with <span className="text-red-500">*</span> are required.
+                    All fields marked with <span className="text-red-500">*</span> are required.
                     Certificate number will be auto-generated.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
@@ -550,7 +620,22 @@ const ManualEntry = ({ onUploadComplete }) => {
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={isUploading || !entry.name?.trim() || !entry.date_issued?.trim() || !!emailError}
+                      disabled={
+                        isUploading ||
+                        !entry.name?.trim() ||
+                        !entry.roll_no?.trim() ||
+                        !entry.email?.trim() ||
+                        !entry.department?.trim() ||
+                        !entry.academic_year?.trim() ||
+                        !entry.location_or_institution?.trim() ||
+                        !entry.location?.trim() ||
+                        !entry.phone?.trim() ||
+                        entry.phone.replace(/\D/g, '').length !== 10 ||
+                        !entry.mode?.trim() ||
+                        !entry.issued_by?.trim() ||
+                        !entry.date_issued?.trim() ||
+                        !!emailError
+                      }
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-secondary px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-secondary/90 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
                       {isUploading ? (

@@ -68,6 +68,7 @@ export const parseExcelFile = (file) =>
               name: getValueByAliases(row, ['name']),
               department: getValueByAliases(row, ['dep', 'department']),
               academic_year: getValueByAliases(row, ['year', 'academic_year']),
+              course_name: getValueByAliases(row, ['course_name', 'course']),
               location_or_institution: getValueByAliases(row, ['ins', 'location_or_institution']),
               location: getValueByAliases(row, ['location']),
               phone: `${getValueByAliases(row, ['phone_number', 'phone']) ?? ''}`.trim(),

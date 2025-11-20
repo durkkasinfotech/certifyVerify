@@ -7,13 +7,16 @@
     "dev": "node ./node_modules/vite/bin/vite.js dev",
     "build": "node ./node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
-    "preview": "node ./node_modules/vite/bin/vite.js preview"
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "generate:certificates": "node scripts/generateAll.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.81.1",
     "file-saver": "^2.0.5",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -7,6 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { QRCodeCanvas } from 'qrcode.react';
 import { toExcelWorkbook } from '../utils/excelParser';
 import { extractSequenceNumber } from '../utils/certificateHelpers';
+import { generateCertificatePDF, downloadPDF, viewPDF } from '../utils/certificateGenerator';
 
 const columns = [
   { key: 'certificate_no', label: 'Certificate Number' },
@@ -42,6 +43,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
     date_issued: '',
     mode: '',
   });
+  const [generatingCertId, setGeneratingCertId] = useState(null);
 
   const filteredCertificates = useMemo(() => {
     let filtered = certificates;
@@ -251,6 +253,47 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
     link.click();
   };
 
+  const handleViewCertificate = async (record) => {
+    try {
+      setGeneratingCertId(record.id);
+      
+      // Validate required data before generating
+      if (!record.name || !record.certificate_no) {
+        throw new Error('Certificate data is incomplete. Name and Certificate Number are required.');
+      }
+      
+      const pdfBlob = await generateCertificatePDF(record);
+      viewPDF(pdfBlob);
+    } catch (error) {
+      console.error('Error viewing certificate:', error);
+      const errorMessage = error?.message || 'Unknown error occurred';
+      alert(`Failed to generate certificate preview.\n\nError: ${errorMessage}\n\nPlease check the console for more details.`);
+    } finally {
+      setGeneratingCertId(null);
+    }
+  };
+
+  const handleDownloadCertificate = async (record) => {
+    try {
+      setGeneratingCertId(record.id);
+      
+      // Validate required data before generating
+      if (!record.name || !record.certificate_no) {
+        throw new Error('Certificate data is incomplete. Name and Certificate Number are required.');
+      }
+      
+      const pdfBlob = await generateCertificatePDF(record);
+      const filename = `${record.name}_${record.certificate_no}.pdf`;
+      downloadPDF(pdfBlob, filename);
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      const errorMessage = error?.message || 'Unknown error occurred';
+      alert(`Failed to download certificate.\n\nError: ${errorMessage}\n\nPlease check the console for more details.`);
+    } finally {
+      setGeneratingCertId(null);
+    }
+  };
+
   return (
     <section className="rounded-xl bg-white/90 p-4 shadow-soft sm:rounded-2xl sm:p-6">
       <header className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
@@ -367,7 +410,13 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
               ))}
               <th className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3 whitespace-nowrap bg-primary">
                 <div className="flex flex-col gap-0.5 sm:gap-1">
-                  <span className="text-[9px] sm:text-[10px] md:text-xs">QR Code</span>
+                  <span className="text-[9px] sm:text-[10px] md:text-xs font-medium">Digital Certificate</span>
+                  <div className="h-5 sm:h-6"></div>
+                </div>
+              </th>
+              <th className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3 whitespace-nowrap bg-primary">
+                <div className="flex flex-col gap-0.5 sm:gap-1">
+                  <span className="text-[9px] sm:text-[10px] md:text-xs font-medium">QR Code</span>
                   <div className="h-5 sm:h-6"></div>
                 </div>
               </th>
@@ -376,14 +425,14 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
           <tbody className="divide-y divide-slate-100 bg-white/80">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 1}>
+                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2}>
                   <i className="fa fa-spinner fa-spin mr-2" aria-hidden="true" />
                   Loading certificate records...
                 </td>
               </tr>
             ) : !filteredCertificates.length ? (
               <tr>
-                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 1}>
+                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2}>
                   No certificates found for the selected filters.
                 </td>
               </tr>
@@ -395,6 +444,43 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
                       <span className="block truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">{record[column.key] || '—'}</span>
                     </td>
                   ))}
+                  {/* Digital Certificate Download Column */}
+                  <td className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3">
+                    <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+                      <div className="flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 p-0.5 sm:gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleViewCertificate(record)}
+                          disabled={generatingCertId === record.id}
+                          className="inline-flex items-center justify-center gap-1 rounded-md bg-primary/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white transition hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]"
+                          title="View Digital Certificate"
+                        >
+                          {generatingCertId === record.id ? (
+                            <i className="fa fa-spinner fa-spin text-xs" aria-hidden="true" />
+                          ) : (
+                            <i className="fa fa-eye text-xs" aria-hidden="true" />
+                          )}
+                          <span className="hidden sm:inline">View</span>
+                        </button>
+                        <div className="h-4 w-px bg-primary/30"></div>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadCertificate(record)}
+                          disabled={generatingCertId === record.id}
+                          className="inline-flex items-center justify-center gap-1 rounded-md bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]"
+                          title="Download Digital Certificate PDF"
+                        >
+                          {generatingCertId === record.id ? (
+                            <i className="fa fa-spinner fa-spin text-xs" aria-hidden="true" />
+                          ) : (
+                            <i className="fa fa-download text-xs" aria-hidden="true" />
+                          )}
+                          <span className="hidden sm:inline">Download</span>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                  {/* QR Code Column */}
                   <td className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3">
                     <div className="flex flex-col items-center gap-1.5 sm:gap-2">
                       <div className="rounded-lg border border-slate-200 p-0.5 shadow-sm sm:p-1 md:p-2">
@@ -426,9 +512,10 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
                           type="button"
                           onClick={() => handleDownloadQr(record)}
                           className="inline-flex items-center justify-center gap-1 rounded-full border border-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary transition hover:bg-primary hover:text-white sm:gap-1.5 sm:px-3 sm:py-1 sm:text-[11px]"
+                          title="Download QR Code Image"
                         >
-                          <i className="fa fa-download text-[9px] sm:text-xs" aria-hidden="true" />
-                          <span className="hidden sm:inline">Download</span>
+                          <i className="fa fa-qrcode text-[9px] sm:text-xs" aria-hidden="true" />
+                          <span className="hidden sm:inline">QR</span>
                         </button>
                       </div>
                     </div>

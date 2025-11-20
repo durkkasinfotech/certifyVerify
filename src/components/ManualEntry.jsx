@@ -342,7 +342,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="number"
                       value={entry.sno}
                       onChange={(e) => handleInputChange('sno', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Serial number (optional)"
                       disabled={isUploading}
                     />
@@ -357,7 +357,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.roll_no}
                       onChange={(e) => handleInputChange('roll_no', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter roll number"
                       required
                       disabled={isUploading}
@@ -373,7 +373,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter full name"
                       required
                       disabled={isUploading}
@@ -390,7 +390,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       value={entry.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$"
-                      className={`w-full rounded-lg border px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 ${emailError
+                      className={`w-full rounded-lg border bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${emailError
                           ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
                           : 'border-slate-300 focus:border-primary focus:ring-primary/20'
                         }`}
@@ -415,7 +415,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.department}
                       onChange={(e) => handleInputChange('department', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="e.g., B.B.A"
                       required
                       disabled={isUploading}
@@ -431,7 +431,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.academic_year}
                       onChange={(e) => handleInputChange('academic_year', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="e.g., 2025-2028"
                       required
                       disabled={isUploading}
@@ -447,7 +447,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.course_name}
                       onChange={(e) => handleInputChange('course_name', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="e.g., AI-Powered Logistics Practitioner - Foundation Level"
                       disabled={isUploading}
                     />
@@ -462,7 +462,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.location_or_institution}
                       onChange={(e) => handleInputChange('location_or_institution', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter institution name"
                       required
                       disabled={isUploading}
@@ -478,7 +478,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.location}
                       onChange={(e) => handleInputChange('location', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter location address"
                       required
                       disabled={isUploading}
@@ -501,7 +501,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       pattern="[0-9]{10}"
                       inputMode="numeric"
                       maxLength={10}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter 10 digit phone number"
                       required
                       disabled={isUploading}
@@ -564,7 +564,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       type="text"
                       value={entry.issued_by}
                       onChange={(e) => handleInputChange('issued_by', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter issuer name"
                       required
                       disabled={isUploading}
@@ -592,7 +592,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                         return '';
                       })()}
                       onChange={(e) => handleInputChange('date_issued', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       required
                       disabled={isUploading}
                     />

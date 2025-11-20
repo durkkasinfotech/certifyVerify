@@ -1,8 +1,8 @@
 export const certificateConfig = {
     // Path to your fillable PDF template (must be in public/templates/)
-    // IMPORTANT: Make sure this file exists! 
-    // Available files: /templates/testing.pdf or /templates/SLCS Certifi final (1).pdf or /templates/SLCS Certifi final (2).pdf
-    templatePath: '/templates/SLCS Certifi final (2).pdf', // Using SLCS Certifi final (2).pdf template
+    // IMPORTANT: Use a filename without spaces for better production compatibility
+    // Production-friendly filename (no spaces) for Vercel deployment
+    templatePath: '/templates/certificate-template.pdf', // Using certificate-template.pdf (production-safe filename)
 
     // Form field names (must match exactly what you set in the PDF using Sejda)
     fields: {

@@ -22,8 +22,9 @@ export async function generateCertificatePDF(studentData, certificateNo = null) 
         const finalCertNo = certificateNo || await generateCertificateNumber(studentData);
 
         // 1. Load the template
-        // URL encode the path to handle spaces and special characters (important for Vercel/production)
-        const templatePath = encodeURI(certificateConfig.templatePath);
+        // Use the path directly (no spaces in filename for production compatibility)
+        // Vercel handles paths better without spaces and special characters
+        const templatePath = certificateConfig.templatePath;
         
         const templateBytes = await fetch(templatePath).then(async (res) => {
             if (!res.ok) {

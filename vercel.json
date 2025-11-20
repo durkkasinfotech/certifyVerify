@@ -6,19 +6,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/templates/:path*",
-      "destination": "/templates/:path*"
-    },
-    {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
-      "source": "/data/:path*",
-      "destination": "/data/:path*"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!templates|assets|data|vite\\.svg|index\\.html).*)",
       "destination": "/index.html"
     }
   ],

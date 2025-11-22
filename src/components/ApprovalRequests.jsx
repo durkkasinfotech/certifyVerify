@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { generateCertificatePDF, viewPDF } from '../utils/certificateGenerator';
 
 const ApprovalRequests = ({ pendingCertificates, onApprovalChange, isLoading }) => {
   const [processingIds, setProcessingIds] = useState(new Set());
+  const [generatingCertId, setGeneratingCertId] = useState(null);
   const [error, setError] = useState('');
 
   const handleApprove = async (certificate) => {
@@ -94,6 +96,28 @@ const ApprovalRequests = ({ pendingCertificates, onApprovalChange, isLoading }) 
     }
   };
 
+  const handleViewCertificate = async (certificate) => {
+    try {
+      setGeneratingCertId(certificate.id);
+      
+      // Validate required data before generating
+      if (!certificate.name || !certificate.certificate_no) {
+        throw new Error('Certificate data is incomplete. Name and Certificate Number are required.');
+      }
+      
+      // Use certificate number from database
+      const pdfBlob = await generateCertificatePDF(certificate, certificate.certificate_no);
+      viewPDF(pdfBlob);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error viewing certificate:', error);
+      const errorMessage = error?.message || 'Unknown error occurred';
+      alert(`Failed to generate certificate preview.\n\nError: ${errorMessage}\n\nPlease check the console for more details.`);
+    } finally {
+      setGeneratingCertId(null);
+    }
+  };
+
   return (
     <section className="rounded-xl bg-white/90 p-4 shadow-soft sm:rounded-2xl sm:p-6">
       <header className="mb-4 flex flex-col gap-3 sm:mb-6 md:flex-row md:items-center md:justify-between">
@@ -151,6 +175,7 @@ const ApprovalRequests = ({ pendingCertificates, onApprovalChange, isLoading }) 
                 <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Course</th>
                 <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Date Issued</th>
                 <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Created</th>
+                <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Digital Certificate</th>
                 <th className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -179,6 +204,27 @@ const ApprovalRequests = ({ pendingCertificates, onApprovalChange, isLoading }) 
                       {certificate.created_at
                         ? new Date(certificate.created_at).toLocaleString()
                         : '—'}
+                    </td>
+                    <td className="px-2 py-2 sm:px-4 sm:py-3">
+                      <button
+                        type="button"
+                        onClick={() => handleViewCertificate(certificate)}
+                        disabled={generatingCertId === certificate.id}
+                        className="inline-flex items-center justify-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
+                        title="View Digital Certificate"
+                      >
+                        {generatingCertId === certificate.id ? (
+                          <>
+                            <i className="fa fa-spinner fa-spin" aria-hidden="true" />
+                            <span className="hidden sm:inline">Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <i className="fa fa-eye" aria-hidden="true" />
+                            <span className="hidden sm:inline">View</span>
+                          </>
+                        )}
+                      </button>
                     </td>
                     <td className="px-2 py-2 sm:px-4 sm:py-3">
                       <div className="flex gap-2">

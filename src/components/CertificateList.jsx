@@ -4,10 +4,10 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { QRCodeCanvas } from 'qrcode.react';
 import JSZip from 'jszip';
+import QRCode from 'qrcode';
 import { toExcelWorkbook } from '../utils/excelParser';
-import { extractSequenceNumber } from '../utils/certificateHelpers';
+import { extractSequenceNumber, buildQrCodeUrl } from '../utils/certificateHelpers';
 import { generateCertificatePDF, downloadPDF, viewPDF } from '../utils/certificateGenerator';
 import EditCertificateModal from './EditCertificateModal.jsx';
 import { supabase } from '../utils/supabaseClient';
@@ -163,9 +163,6 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
     onRefresh();
   };
 
-  const getQrElementId = (certificateNo) =>
-    `qr-${(certificateNo ?? '').replace(/[^a-zA-Z0-9]/g, '-')}`;
-
   const handleExportExcel = () => {
     if (!filteredCertificates.length) return;
     const workbook = toExcelWorkbook(filteredCertificates);
@@ -305,17 +302,35 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
     return `${filename}.png`;
   };
 
-  const handleDownloadQr = (record) => {
+  const handleDownloadQr = async (record) => {
     if (!record || !record.certificate_no) return;
-    const canvas = document.getElementById(getQrElementId(record.certificate_no));
-    if (!canvas) return;
 
-    const filename = getQrFileName(record);
-    const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
-    const link = document.createElement('a');
-    link.href = pngUrl;
-    link.download = filename;
-    link.click();
+    try {
+      const qrCodeUrl = record.qr_code_url || buildQrCodeUrl(record.certificate_no);
+      
+      // Generate QR code programmatically
+      const qrDataUrl = await QRCode.toDataURL(qrCodeUrl, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: '#120f2d',
+          light: '#ffffff'
+        },
+        width: 300
+      });
+
+      const filename = getQrFileName(record);
+      const link = document.createElement('a');
+      link.href = qrDataUrl;
+      link.download = filename;
+      link.click();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error generating QR code:', error);
+      alert('Failed to generate QR code. Please try again.');
+    }
   };
 
   const handleDownloadAllApprovedQr = async () => {
@@ -333,45 +348,44 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
       const zip = new JSZip();
       const qrFolder = zip.folder('approved_qr_codes');
 
-      // Wait a bit to ensure all QR codes are rendered
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Generate QR codes programmatically for all approved certificates
+      const qrPromises = approvedCertificates.map(async (record) => {
+        try {
+          const qrCodeUrl = record.qr_code_url || buildQrCodeUrl(record.certificate_no);
+          
+          // Generate QR code as data URL
+          const qrDataUrl = await QRCode.toDataURL(qrCodeUrl, {
+            errorCorrectionLevel: 'H',
+            type: 'image/png',
+            quality: 0.92,
+            margin: 1,
+            color: {
+              dark: '#120f2d',
+              light: '#ffffff'
+            },
+            width: 300
+          });
 
-      // Process all QR codes and wait for all blobs
-      const blobPromises = approvedCertificates.map((record) => {
-        return new Promise((resolve) => {
-          try {
-            const canvas = document.getElementById(getQrElementId(record.certificate_no));
-            if (!canvas) {
-              // eslint-disable-next-line no-console
-              console.warn(`QR code canvas not found for ${record.certificate_no}`);
-              resolve(null);
-              return;
-            }
-
-            // Convert canvas to blob
-            canvas.toBlob((blob) => {
-              if (blob) {
-                const filename = getQrFileName(record);
-                resolve({ filename, blob });
-              } else {
-                resolve(null);
-              }
-            }, 'image/png');
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(`Error processing QR for ${record.certificate_no}:`, error);
-            resolve(null);
-          }
-        });
+          // Convert data URL to blob
+          const response = await fetch(qrDataUrl);
+          const blob = await response.blob();
+          
+          const filename = getQrFileName(record);
+          return { filename, blob };
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`Error generating QR for ${record.certificate_no}:`, error);
+          return null;
+        }
       });
 
-      // Wait for all blobs to be processed
-      const results = await Promise.all(blobPromises);
+      // Wait for all QR codes to be generated
+      const results = await Promise.all(qrPromises);
       
       let successCount = 0;
       let failCount = 0;
 
-      // Add all successful blobs to zip
+      // Add all successful QR codes to zip
       results.forEach((result) => {
         if (result && result.blob) {
           qrFolder.file(result.filename, result.blob);
@@ -382,7 +396,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
       });
 
       if (successCount === 0) {
-        alert('No QR codes could be generated. Please ensure the certificates are displayed in the table.');
+        alert('No QR codes could be generated. Please try again.');
         setDownloadingAllQr(false);
         return;
       }
@@ -584,12 +598,6 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
                   <div className="h-5 sm:h-6"></div>
                 </div>
               </th>
-              <th className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3 whitespace-nowrap bg-primary">
-                <div className="flex flex-col gap-0.5 sm:gap-1">
-                  <span className="text-[9px] sm:text-[10px] md:text-xs font-medium">QR Code</span>
-                  <div className="h-5 sm:h-6"></div>
-                </div>
-              </th>
               {isSuperAdmin && (
                 <th className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3 whitespace-nowrap bg-primary">
                   <div className="flex flex-col gap-0.5 sm:gap-1">
@@ -603,14 +611,14 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
           <tbody className="divide-y divide-slate-100 bg-white/80">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2 + (isSuperAdmin ? 1 : 0)}>
+                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 1 + (isSuperAdmin ? 1 : 0)}>
                   <i className="fa fa-spinner fa-spin mr-2" aria-hidden="true" />
                   Loading certificate records...
                 </td>
               </tr>
             ) : !filteredCertificates.length ? (
               <tr>
-                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2 + (isSuperAdmin ? 1 : 0)}>
+                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 1 + (isSuperAdmin ? 1 : 0)}>
                   No certificates found for the selected filters.
                 </td>
               </tr>
@@ -668,46 +676,6 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
                             <i className="fa fa-download text-xs" aria-hidden="true" />
                           )}
                           <span className="hidden sm:inline">Download</span>
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                  {/* QR Code Column */}
-                  <td className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3">
-                    <div className="flex flex-col items-center gap-1.5 sm:gap-2">
-                      <div className="rounded-lg border border-slate-200 p-0.5 shadow-sm sm:p-1 md:p-2">
-                        <QRCodeCanvas
-                          id={getQrElementId(record.certificate_no)}
-                          value={record.qr_code_url}
-                          size={60}
-                          level="H"
-                          includeMargin
-                          bgColor="#ffffff"
-                          fgColor="#120f2d"
-                        />
-                      </div>
-                      <div className="flex flex-row items-center justify-center gap-1.5 w-full sm:gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Navigate to verify page with certificate number
-                            const encodedCertNo = encodeURIComponent(record.certificate_no);
-                            navigate(`/verify/${encodedCertNo}`);
-                          }}
-                          className="inline-flex items-center justify-center gap-1 rounded-full border border-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary transition hover:bg-primary hover:text-white sm:gap-1.5 sm:px-3 sm:py-1 sm:text-[11px]"
-                          title={`Verify ${record.name} - ${record.certificate_no}`}
-                        >
-                          <i className="fa fa-link text-[9px] sm:text-xs" aria-hidden="true" />
-                          <span className="hidden sm:inline">Open</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDownloadQr(record)}
-                          className="inline-flex items-center justify-center gap-1 rounded-full border border-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary transition hover:bg-primary hover:text-white sm:gap-1.5 sm:px-3 sm:py-1 sm:text-[11px]"
-                          title="Download QR Code Image"
-                        >
-                          <i className="fa fa-qrcode text-[9px] sm:text-xs" aria-hidden="true" />
-                          <span className="hidden sm:inline">QR</span>
                         </button>
                       </div>
                     </div>

@@ -82,30 +82,24 @@ const Login = () => {
       });
 
       if (authError) {
-        // Handle specific error messages
-        let errorMessage = 'Login failed. Please check your credentials.';
+        // Simple error message for password/auth errors
+        let errorMessage = 'Incorrect password';
         
-        // Check for specific error types
+        // Check for specific error types - keep it simple
         if (authError.message) {
-          // Extract user-friendly message
-          if (authError.message.includes('Invalid login credentials')) {
-            errorMessage = 'Invalid email or password. The user may not exist in Supabase. Please create the user in Supabase Dashboard → Authentication → Users first.';
-          } else if (authError.message.includes('Email not confirmed')) {
-            errorMessage = 'Please confirm your email address before logging in.';
-          } else if (authError.message.includes('User not found')) {
-            errorMessage = 'User account not found. Please contact administrator.';
+          if (authError.message.includes('Invalid login credentials') || 
+              authError.message.includes('Invalid credentials') ||
+              authError.status === 400 ||
+              authError.status === 401) {
+            errorMessage = 'Incorrect password';
+          } else if (authError.status === 429) {
+            errorMessage = 'Too many login attempts. Please try again later.';
           } else {
-            errorMessage = authError.message;
+            errorMessage = 'Incorrect password';
           }
-        } else if (authError.status === 400) {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
-        } else if (authError.status === 401) {
-          errorMessage = 'Invalid email or password.';
-        } else if (authError.status === 429) {
-          errorMessage = 'Too many login attempts. Please try again later.';
         }
         
-        // Log full error for debugging
+        // Log full error for debugging (but don't show to user)
         // eslint-disable-next-line no-console
         console.error('Login error details:', {
           message: authError.message,
@@ -151,29 +145,14 @@ const Login = () => {
       
       if (role === 'super_admin') {
         await supabase.auth.signOut();
-        setError('Super Administrators must use the Super Admin login page. Please go to /superadmin/login');
+        setError('Incorrect password');
         setIsLoading(false);
         return;
       }
 
-      if (!role) {
+      if (!role || role !== 'admin') {
         await supabase.auth.signOut();
-        setError(
-          'Access denied. Your account does not have a role assigned. ' +
-          'Please run database/FIX_ADMIN_LOGIN.sql in Supabase SQL Editor to assign the admin role.'
-        );
-        setIsLoading(false);
-        return;
-      }
-      
-      if (role !== 'admin') {
-        await supabase.auth.signOut();
-        setError(
-          `Access denied. Your account has the "${role}" role. ` +
-          (role === 'super_admin' 
-            ? 'Super Administrators must use /superadmin/login instead.'
-            : 'Only users with "admin" role can access this page.')
-        );
+        setError('Incorrect password');
         setIsLoading(false);
         return;
       }

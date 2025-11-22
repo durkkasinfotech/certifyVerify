@@ -96,23 +96,19 @@ const SuperAdminLogin = () => {
           error: authError,
         });
         
-        let errorMessage = 'Login failed. Please check your credentials.';
+        // Simple error message for password/auth errors
+        let errorMessage = 'Incorrect password';
         
         if (authError.message) {
           if (authError.message.includes('Invalid login credentials') || 
               authError.message.includes('Invalid credentials') ||
-              authError.status === 400) {
-            errorMessage = 'Invalid email or password. Please verify:\n' +
-              '1. The email is correct: ' + trimmedEmail.toLowerCase() + '\n' +
-              '2. The password is correct\n' +
-              '3. The user exists in Supabase Authentication\n' +
-              '4. Check browser console for more details';
-          } else if (authError.message.includes('Email not confirmed')) {
-            errorMessage = 'Please confirm your email address before logging in.';
-          } else if (authError.message.includes('User not found')) {
-            errorMessage = 'User account not found. Please ensure the user exists in Supabase Authentication.';
+              authError.status === 400 ||
+              authError.status === 401) {
+            errorMessage = 'Incorrect password';
+          } else if (authError.status === 429) {
+            errorMessage = 'Too many login attempts. Please try again later.';
           } else {
-            errorMessage = `Authentication error: ${authError.message}`;
+            errorMessage = 'Incorrect password';
           }
         }
         
@@ -162,24 +158,9 @@ const SuperAdminLogin = () => {
       // eslint-disable-next-line no-console
       console.log('Role check result:', role);
       
-      if (!role) {
+      if (!role || role !== 'super_admin') {
         await supabase.auth.signOut();
-        setError(
-          'Access denied. Your account does not have a role assigned. ' +
-          'Please contact the administrator to assign you the "super_admin" role in the database.'
-        );
-        setIsLoading(false);
-        return;
-      }
-      
-      if (role !== 'super_admin') {
-        await supabase.auth.signOut();
-        setError(
-          `Access denied. Your account has the "${role}" role, but this login is only for Super Administrators. ` +
-          (role === 'admin' 
-            ? 'Please use the normal admin login at /login instead.'
-            : 'Please use the correct login page for your role.')
-        );
+        setError('Incorrect password');
         setIsLoading(false);
         return;
       }
@@ -216,19 +197,9 @@ const SuperAdminLogin = () => {
           </div>
 
           {error && (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 whitespace-pre-line">
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               <i className="fa fa-circle-exclamation mr-2" aria-hidden="true" />
               {error}
-              <div className="mt-3 text-xs text-red-500">
-                <p className="font-semibold">Troubleshooting:</p>
-                <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>Verify the user exists in Supabase Dashboard → Authentication → Users</li>
-                  <li>Check that the email is exactly: admin@darecentre.in (case-insensitive)</li>
-                  <li>Ensure the password matches exactly (check for extra spaces)</li>
-                  <li>Check browser console (F12) for detailed error messages</li>
-                  <li>If user doesn't exist, create it in Supabase Dashboard first</li>
-                </ul>
-              </div>
             </div>
           )}
 

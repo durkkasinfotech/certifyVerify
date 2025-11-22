@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   buildQrCodeUrl,
+  certificateNumberExists,
   formatDateForDb,
   getAcademicYearSegment,
   getNextSequence,
   makeCertificateNumber,
+  normalizeAcademicYearSegment,
   normalizeDate,
 } from '../utils/certificateHelpers';
 import { supabase } from '../utils/supabaseClient';
+import { getUserRole } from '../utils/authHelpers';
 
 const ManualEntry = ({ onUploadComplete }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,6 +35,7 @@ const ManualEntry = ({ onUploadComplete }) => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [isGeneratingCertNo, setIsGeneratingCertNo] = useState(false);
 
   const supabaseConfigured = useMemo(() => Boolean(supabase), []);
 
@@ -47,6 +51,52 @@ const ManualEntry = ({ onUploadComplete }) => {
       document.body.style.overflow = 'unset';
     };
   }, [isModalOpen]);
+
+  // Auto-generate certificate number when date_issued or academic_year is filled
+  useEffect(() => {
+    const generateCertificateNumber = async () => {
+      // Only generate if certificate_no is empty and we have required fields
+      if (entry.certificate_no?.trim()) {
+        return; // Don't regenerate if already set
+      }
+
+      // Need either date_issued or academic_year to generate
+      const hasDate = entry.date_issued?.trim();
+      const hasAcademicYear = entry.academic_year?.trim();
+
+      if (!hasDate && !hasAcademicYear) {
+        return; // Not enough info to generate
+      }
+
+      if (!supabaseConfigured) {
+        return;
+      }
+
+      setIsGeneratingCertNo(true);
+      try {
+        // CONSTANT: Year segment is always '25-26' for certificate numbers
+        const yearSegment = '25-26';
+        
+        // Auto-generate from highest existing certificate number globally
+        // getNextSequence already checks for uniqueness, so this will be unique
+        const nextSeq = await getNextSequence({ yearSegment, useGlobal: true });
+        const certificateNo = makeCertificateNumber(nextSeq);
+        setEntry((prev) => ({ ...prev, certificate_no: certificateNo }));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error auto-generating certificate number:', error);
+        // Don't show error to user, just silently fail
+      } finally {
+        setIsGeneratingCertNo(false);
+      }
+    };
+
+    // Only generate when modal is open
+    if (isModalOpen) {
+      generateCertificateNumber();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.date_issued, entry.academic_year, isModalOpen, supabaseConfigured]);
 
   const resetForm = () => {
     setEntry({
@@ -176,14 +226,22 @@ const ManualEntry = ({ onUploadComplete }) => {
         );
       }
 
-      // Use provided academic_year or calculate from date
-      const academicYear = entry.academic_year?.trim() || getAcademicYearSegment(issuedDate);
+      // CONSTANT: Year segment is always '25-26' for certificate numbers
+      const yearSegment = '25-26';
 
       let certificateNo = entry.certificate_no?.trim().replace(/\s+/g, '').toUpperCase() || '';
 
       if (!certificateNo) {
-        const nextSeq = await getNextSequence({ yearSegment: academicYear });
-        certificateNo = makeCertificateNumber(nextSeq, academicYear);
+        // Auto-generate from highest existing certificate number globally
+        // getNextSequence already checks for uniqueness, so this will be unique
+        const nextSeq = await getNextSequence({ yearSegment, useGlobal: true });
+        certificateNo = makeCertificateNumber(nextSeq);
+      } else {
+        // If certificate number is manually provided, verify it's unique
+        const exists = await certificateNumberExists(certificateNo);
+        if (exists) {
+          throw new Error(`Certificate number ${certificateNo} already exists. Please use a unique certificate number.`);
+        }
       }
 
       const toNullIfEmpty = (input) => {
@@ -191,6 +249,20 @@ const ManualEntry = ({ onUploadComplete }) => {
         const trimmed = `${input}`.trim();
         return trimmed.length ? trimmed : null;
       };
+
+      // Determine status based on user role
+      // IMPORTANT: Normal admin entries MUST go to 'pending_approval' for Super Admin approval
+      const userRole = await getUserRole();
+      // eslint-disable-next-line no-console
+      console.log('ManualEntry - User role detected:', userRole);
+      
+      // Force status to 'pending_approval' for all entries created through Admin dashboard
+      // Only Super Admin entries (created through Super Admin dashboard) should be 'approved'
+      // Since this is ManualEntry component used in Admin dashboard, always set to 'pending_approval'
+      const status = userRole === 'super_admin' ? 'approved' : 'pending_approval';
+      
+      // eslint-disable-next-line no-console
+      console.log('ManualEntry - Setting status to:', status, '(userRole:', userRole, ')');
 
       const payload = {
         sno: entry.sno ? Number.parseInt(entry.sno, 10) : null,
@@ -208,12 +280,26 @@ const ManualEntry = ({ onUploadComplete }) => {
         email: entry.email.trim().toLowerCase(),
         date_issued: formatDateForDb(issuedDate),
         qr_code_url: buildQrCodeUrl(certificateNo),
+        status: status, // Explicitly set status: 'pending_approval' for admin, 'approved' for super_admin
       };
+
+      // Debug logging
+      // eslint-disable-next-line no-console
+      console.log('ManualEntry - Inserting payload with status:', status, 'Full payload:', payload);
 
       const { data, error: insertError } = await supabase
         .from('certificates')
         .insert([payload])
         .select();
+      
+      // Debug logging
+      if (insertError) {
+        // eslint-disable-next-line no-console
+        console.error('ManualEntry - Insert error:', insertError);
+      } else {
+        // eslint-disable-next-line no-console
+        console.log('ManualEntry - Insert successful, returned data:', data);
+      }
 
       if (insertError) {
         throw insertError;
@@ -512,14 +598,39 @@ const ManualEntry = ({ onUploadComplete }) => {
                   <div>
                     <label className="mb-1 block text-xs sm:text-sm font-semibold text-slate-700">
                       Certificate Number
+                      {isGeneratingCertNo && (
+                        <span className="ml-2 text-xs text-slate-500">
+                          <i className="fa fa-spinner fa-spin" aria-hidden="true" /> Generating...
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
-                      value={entry.certificate_no}
-                      disabled
-                      className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-500 cursor-not-allowed"
-                      placeholder="Auto-generated (cannot be modified)"
+                      value={entry.certificate_no || ''}
+                      onChange={(e) => {
+                        // Allow manual entry/paste, but normalize it
+                        const value = e.target.value.trim().toUpperCase().replace(/\s+/g, '');
+                        handleInputChange('certificate_no', value);
+                      }}
+                      onPaste={(e) => {
+                        // Handle paste event - normalize the pasted value
+                        e.preventDefault();
+                        const pasted = e.clipboardData.getData('text');
+                        const normalized = pasted.trim().toUpperCase().replace(/\s+/g, '');
+                        handleInputChange('certificate_no', normalized);
+                      }}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      placeholder={isGeneratingCertNo ? 'Generating certificate number...' : 'Auto-generated when date is filled (or paste/enter manually)'}
+                      disabled={isUploading}
                     />
+                    {entry.certificate_no && (
+                      <p className="mt-1 text-[10px] sm:text-xs text-slate-500">
+                        <i className="fa fa-info-circle mr-1" aria-hidden="true" />
+                        {entry.certificate_no.match(/^DARE\/AIR\/LP\/\d{2}-\d{2}\/\d{3,}$/) 
+                          ? 'Valid format. Will check for duplicates before saving.'
+                          : 'Auto-generated from highest existing certificate number'}
+                      </p>
+                    )}
                   </div>
 
                   {/* 10. Mode */}

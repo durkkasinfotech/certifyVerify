@@ -8,8 +8,11 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { toExcelWorkbook } from '../utils/excelParser';
 import { extractSequenceNumber } from '../utils/certificateHelpers';
 import { generateCertificatePDF, downloadPDF, viewPDF } from '../utils/certificateGenerator';
+import EditCertificateModal from './EditCertificateModal.jsx';
+import { supabase } from '../utils/supabaseClient';
 
-const columns = [
+const getColumns = (isSuperAdmin) => {
+  const baseColumns = [
   { key: 'certificate_no', label: 'Certificate Number' },
   { key: 'name', label: 'Name' },
   { key: 'course_name', label: 'Course Name' },
@@ -17,7 +20,13 @@ const columns = [
   { key: 'mode', label: 'Mode' },
 ];
 
-const filterRecords = (records, query) => {
+  // Show status column for both Admin and Super Admin
+  baseColumns.push({ key: 'status', label: 'Status' });
+  
+  return baseColumns;
+};
+
+const filterRecords = (records, query, isSuperAdmin) => {
   if (!query) return records;
   const lower = query.toLowerCase();
   return records.filter((record) =>
@@ -27,14 +36,16 @@ const filterRecords = (records, query) => {
       record.course_name,
       record.date_issued,
       record.mode,
+      record.status, // Always include status in search
     ]
       .filter(Boolean)
       .some((value) => `${value}`.toLowerCase().includes(lower))
   );
 };
 
-const CertificateList = ({ certificates, isLoading, onRefresh }) => {
+const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = false }) => {
   const navigate = useNavigate();
+  const columns = useMemo(() => getColumns(isSuperAdmin), [isSuperAdmin]);
   const [search, setSearch] = useState('');
   const [columnFilters, setColumnFilters] = useState({
     certificate_no: '',
@@ -42,15 +53,18 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
     course_name: '',
     date_issued: '',
     mode: '',
+    status: '', // Always include status filter
   });
   const [generatingCertId, setGeneratingCertId] = useState(null);
+  const [editingCertificate, setEditingCertificate] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const filteredCertificates = useMemo(() => {
     let filtered = certificates;
 
     // Apply global search filter
     if (search) {
-      filtered = filterRecords(filtered, search);
+      filtered = filterRecords(filtered, search, isSuperAdmin);
     }
 
     // Apply column-specific filters
@@ -65,7 +79,9 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
         (!columnFilters.date_issued ||
           `${record.date_issued ?? ''}`.toLowerCase().includes(columnFilters.date_issued.toLowerCase())) &&
         (!columnFilters.mode ||
-          `${record.mode ?? ''}`.toLowerCase().includes(columnFilters.mode.toLowerCase()))
+          `${record.mode ?? ''}`.toLowerCase().includes(columnFilters.mode.toLowerCase())) &&
+        (!columnFilters.status ||
+          `${record.status ?? ''}`.toLowerCase().includes(columnFilters.status.toLowerCase()))
       );
     });
 
@@ -79,7 +95,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
       // If sequence numbers are the same, sort by full certificate number
       return (a.certificate_no || '').localeCompare(b.certificate_no || '');
     });
-  }, [certificates, search, columnFilters]);
+  }, [certificates, search, columnFilters, isSuperAdmin]);
 
   const handleColumnFilterChange = (columnKey, value) => {
     setColumnFilters((prev) => ({
@@ -96,7 +112,53 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
       course_name: '',
       date_issued: '',
       mode: '',
+      status: '', // Always include status filter
     });
+  };
+
+  const handleEdit = (certificate) => {
+    setEditingCertificate(certificate);
+  };
+
+  const handleDelete = async (certificate) => {
+    if (!confirm(`Are you sure you want to PERMANENTLY DELETE the certificate for ${certificate.name} (${certificate.certificate_no})? This action cannot be undone and will completely remove the data from the database.`)) {
+      return;
+    }
+
+    setDeletingId(certificate.id);
+
+    try {
+      // Permanently delete from database - this completely removes the record
+      const { error, data } = await supabase
+        .from('certificates')
+        .delete()
+        .eq('id', certificate.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('Certificate permanently deleted from database:', certificate.id, certificate.certificate_no);
+
+      // Refresh the list to reflect the deletion
+      onRefresh();
+      
+      // Show success message
+      alert(`Certificate ${certificate.certificate_no} has been permanently deleted from the database.`);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Delete error:', err);
+      alert(`Failed to delete certificate: ${err.message}\n\nPlease check the console for more details.`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEditSave = () => {
+    setEditingCertificate(null);
+    onRefresh();
   };
 
   const getQrElementId = (certificateNo) =>
@@ -262,7 +324,8 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
         throw new Error('Certificate data is incomplete. Name and Certificate Number are required.');
       }
       
-      const pdfBlob = await generateCertificatePDF(record);
+      // Use certificate number from database (record.certificate_no)
+      const pdfBlob = await generateCertificatePDF(record, record.certificate_no);
       viewPDF(pdfBlob);
     } catch (error) {
       console.error('Error viewing certificate:', error);
@@ -282,7 +345,8 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
         throw new Error('Certificate data is incomplete. Name and Certificate Number are required.');
       }
       
-      const pdfBlob = await generateCertificatePDF(record);
+      // Use certificate number from database (record.certificate_no)
+      const pdfBlob = await generateCertificatePDF(record, record.certificate_no);
       const filename = `${record.name}_${record.certificate_no}.pdf`;
       downloadPDF(pdfBlob, filename);
     } catch (error) {
@@ -420,19 +484,27 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
                   <div className="h-5 sm:h-6"></div>
                 </div>
               </th>
+              {isSuperAdmin && (
+                <th className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3 whitespace-nowrap bg-primary">
+                  <div className="flex flex-col gap-0.5 sm:gap-1">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs font-medium">Actions</span>
+                    <div className="h-5 sm:h-6"></div>
+                  </div>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white/80">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2}>
+                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2 + (isSuperAdmin ? 1 : 0)}>
                   <i className="fa fa-spinner fa-spin mr-2" aria-hidden="true" />
                   Loading certificate records...
                 </td>
               </tr>
             ) : !filteredCertificates.length ? (
               <tr>
-                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2}>
+                <td className="px-4 py-12 text-center text-slate-500" colSpan={columns.length + 2 + (isSuperAdmin ? 1 : 0)}>
                   No certificates found for the selected filters.
                 </td>
               </tr>
@@ -441,7 +513,21 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
                 <tr key={record.id}>
                   {columns.map((column) => (
                     <td key={column.key} className="px-1.5 py-1.5 text-slate-600 text-xs sm:px-2 sm:py-2 sm:text-sm md:px-4 md:py-3 whitespace-nowrap">
+                      {column.key === 'status' ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:px-3 sm:py-1 sm:text-xs ${
+                          record.status === 'approved' 
+                            ? 'bg-green-100 text-green-700' 
+                            : record.status === 'pending_approval'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : record.status === 'rejected'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {record.status === 'approved' ? '✓ Verified' : record.status === 'pending_approval' ? '⏳ Pending' : record.status === 'rejected' ? '✗ Rejected' : record.status || '—'}
+                        </span>
+                      ) : (
                       <span className="block truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">{record[column.key] || '—'}</span>
+                      )}
                     </td>
                   ))}
                   {/* Digital Certificate Download Column */}
@@ -520,12 +606,51 @@ const CertificateList = ({ certificates, isLoading, onRefresh }) => {
                       </div>
                     </div>
                   </td>
+                  {isSuperAdmin && (
+                    <td className="px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-4 md:py-3">
+                      <div className="flex gap-1 sm:gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(record)}
+                          className="inline-flex items-center justify-center gap-1 rounded-full bg-blue-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white transition hover:bg-blue-700 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]"
+                          title="Edit Certificate"
+                        >
+                          <i className="fa fa-edit text-xs" aria-hidden="true" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(record)}
+                          disabled={deletingId === record.id}
+                          className="inline-flex items-center justify-center gap-1 rounded-full bg-red-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[11px]"
+                          title="Delete Certificate"
+                        >
+                          {deletingId === record.id ? (
+                            <i className="fa fa-spinner fa-spin text-xs" aria-hidden="true" />
+                          ) : (
+                            <i className="fa fa-trash text-xs" aria-hidden="true" />
+                          )}
+                          <span className="hidden sm:inline">Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      {editingCertificate && (
+        <EditCertificateModal
+          certificate={editingCertificate}
+          isOpen={!!editingCertificate}
+          onClose={() => setEditingCertificate(null)}
+          onSave={handleEditSave}
+        />
+      )}
     </section>
   );
 };

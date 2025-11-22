@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient';
 
 const DEFAULT_PREFIX = import.meta.env.VITE_CERT_PREFIX ?? 'DARE/AIR/LP';
+// CONSTANT: Year segment for certificate numbers - NEVER CHANGES
+const YEAR_SEGMENT = '25-26';
 const resolveOrigin = () => {
   if (typeof window !== 'undefined' && window.location) {
     return window.location.origin;
@@ -76,7 +78,46 @@ export const formatDateForDb = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Convert full academic year (2025-2028) to short format (25-26) for certificate numbers
+export const normalizeAcademicYearSegment = (academicYear) => {
+  if (!academicYear || !academicYear.trim()) {
+    return null;
+  }
+
+  const trimmed = academicYear.trim();
+  
+  // If already in short format (25-26), return as is
+  if (/^\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // If in full format (2025-2028), convert to short format (25-26)
+  const fullFormatMatch = trimmed.match(/^(\d{4})-(\d{4})$/);
+  if (fullFormatMatch) {
+    const startYear = fullFormatMatch[1];
+    const endYear = fullFormatMatch[2];
+    const shortStart = startYear.slice(-2);
+    const shortEnd = endYear.slice(-2);
+    return `${shortStart}-${shortEnd}`;
+  }
+  
+  // If single year (2025), convert to 25-26 format
+  const singleYearMatch = trimmed.match(/^(\d{4})$/);
+  if (singleYearMatch) {
+    const year = Number.parseInt(singleYearMatch[1], 10);
+    if (!Number.isNaN(year)) {
+      const shortYear = `${year}`.slice(-2);
+      const nextShort = `${(year + 1)}`.slice(-2);
+      return `${shortYear}-${nextShort}`;
+    }
+  }
+  
+  return null;
+};
+
 export const getAcademicYearSegment = (date) => {
+  // Returns format: 25-26 (for 2025-2026 academic year)
+  // Only the last 2 digits of each year, separated by hyphen
   const year = date.getFullYear();
   const shortYear = `${year}`.slice(-2);
   const nextShort = `${(year + 1)}`.slice(-2);
@@ -85,48 +126,169 @@ export const getAcademicYearSegment = (date) => {
 
 export const extractSequenceNumber = (certificateNo) => {
   if (!certificateNo) return 0;
-  // Handle both formats: 25-26/001 (slash) or 25-26-001 (hyphen)
-  const match = certificateNo.match(/(\d{2}-\d{2})[\/-](\d{3,})$/);
-  if (!match) return 0;
-  return Number.parseInt(match[2], 10) || 0;
+  
+  // Handle multiple formats:
+  // 1. DARE/AIR/LP/25-26/059 (slash after year segment)
+  // 2. DARE/AIR/LP/25-26-059 (hyphen after year segment)
+  // 3. 25-26/059 (just year segment and sequence)
+  // 4. 25-26-059 (year segment and sequence with hyphen)
+  
+  // Try to match sequence number at the end (3+ digits)
+  // Pattern: .../059 or ...-059 or ...059
+  const patterns = [
+    /[\/-](\d{3,})$/,           // Match /059 or -059 at the end
+    /(\d{3,})$/,                // Match 059 at the end (fallback)
+  ];
+  
+  for (const pattern of patterns) {
+    const match = certificateNo.match(pattern);
+    if (match) {
+      const seq = Number.parseInt(match[1], 10);
+      if (!Number.isNaN(seq) && seq > 0) {
+        return seq;
+      }
+    }
+  }
+  
+  return 0;
 };
 
-export const makeCertificateNumber = (sequence, yearSegment, prefix = DEFAULT_PREFIX) => {
-  const seq = `${sequence}`.padStart(3, '0');
-  return `${prefix}/${yearSegment}/${seq}`;
+export const makeCertificateNumber = (sequence, yearSegment = YEAR_SEGMENT, prefix = DEFAULT_PREFIX) => {
+  // Ensure sequence is a number and pad to 3 digits (001, 002, etc.)
+  const seqNum = Number.parseInt(sequence, 10) || 0;
+  const seq = `${seqNum}`.padStart(3, '0');
+  
+  // Format: DARE/AIR/LP/25-26/001
+  // CONSTANT: Year segment is always '25-26' - NEVER CHANGES
+  // Only the last 3 digits (sequence) change, everything else stays the same
+  return `${prefix}/${YEAR_SEGMENT}/${seq}`;
 };
 
-export const getNextSequence = async ({ prefix = DEFAULT_PREFIX, yearSegment }) => {
+// Check if a certificate number already exists in the database
+export const certificateNumberExists = async (certificateNo) => {
   if (!supabase) {
     throw new Error('Supabase client is not configured.');
   }
-  // Query for both formats: with slash (25-26/001) and hyphen (25-26-001) for backward compatibility
-  const likePatternSlash = `${prefix}/${yearSegment}/%`;
-  const likePatternHyphen = `${prefix}/${yearSegment}-%`;
+
+  if (!certificateNo || !certificateNo.trim()) {
+    return false;
+  }
+
+  // Check for exact match (case-insensitive)
+  const { data, error } = await supabase
+    .from('certificates')
+    .select('certificate_no')
+    .eq('certificate_no', certificateNo.trim().toUpperCase())
+    .maybeSingle();
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error checking certificate number existence:', error);
+    // If there's an error, assume it doesn't exist to avoid blocking
+    return false;
+  }
+
+  return !!data;
+};
+
+// Get the highest sequence number globally (across all certificates)
+export const getHighestSequenceNumber = async () => {
+  if (!supabase) {
+    throw new Error('Supabase client is not configured.');
+  }
+
+  // Get all certificate numbers
+  const { data, error } = await supabase
+    .from('certificates')
+    .select('certificate_no');
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    // eslint-disable-next-line no-console
+    console.log('No existing certificates found. Starting from sequence 1.');
+    return 0; // No certificates exist, start from 1
+  }
+
+  // Extract sequence numbers from all certificates and find the maximum
+  const sequences = data.map((row) => extractSequenceNumber(row.certificate_no));
+  const maxSequence = sequences.reduce((acc, value) => Math.max(acc, value), 0);
+
+  // eslint-disable-next-line no-console
+  console.log(`Found ${data.length} existing certificates. Highest sequence: ${maxSequence}. Next will be: ${maxSequence + 1}`);
+
+  return maxSequence;
+};
+
+// Get a unique certificate number by checking for duplicates
+export const getUniqueCertificateNumber = async ({ prefix = DEFAULT_PREFIX, yearSegment, useGlobal = false, maxAttempts = 100 }) => {
+  if (!supabase) {
+    throw new Error('Supabase client is not configured.');
+  }
+
+  let nextSeq;
   
-  const [resultSlash, resultHyphen] = await Promise.all([
-    supabase.from('certificates').select('certificate_no').like('certificate_no', likePatternSlash),
-    supabase.from('certificates').select('certificate_no').like('certificate_no', likePatternHyphen),
-  ]);
+  // If useGlobal is true, find highest sequence across all certificates
+  if (useGlobal) {
+    const highestSeq = await getHighestSequenceNumber();
+    nextSeq = highestSeq + 1;
+  } else {
+    // Original logic: find max sequence for specific year segment
+    // Query for both formats: with slash (25-26/001) and hyphen (25-26-001) for backward compatibility
+    const likePatternSlash = `${prefix}/${yearSegment}/%`;
+    const likePatternHyphen = `${prefix}/${yearSegment}-%`;
+    
+    const [resultSlash, resultHyphen] = await Promise.all([
+      supabase.from('certificates').select('certificate_no').like('certificate_no', likePatternSlash),
+      supabase.from('certificates').select('certificate_no').like('certificate_no', likePatternHyphen),
+    ]);
 
-  if (resultSlash.error) {
-    throw resultSlash.error;
+    if (resultSlash.error) {
+      throw resultSlash.error;
+    }
+    if (resultHyphen.error) {
+      throw resultHyphen.error;
+    }
+
+    // Combine results from both queries
+    const allCertificates = [
+      ...(resultSlash.data || []),
+      ...(resultHyphen.data || []),
+    ];
+
+    const maxSequence = allCertificates
+      .map((row) => extractSequenceNumber(row.certificate_no))
+      .reduce((acc, value) => Math.max(acc, value), 0) ?? 0;
+
+    nextSeq = maxSequence + 1;
   }
-  if (resultHyphen.error) {
-    throw resultHyphen.error;
+
+  // Keep checking until we find a unique certificate number
+  let attempts = 0;
+  while (attempts < maxAttempts) {
+    const candidateCertNo = makeCertificateNumber(nextSeq, yearSegment, prefix);
+    const exists = await certificateNumberExists(candidateCertNo);
+    
+    if (!exists) {
+      // Found a unique certificate number
+      return nextSeq;
+    }
+    
+    // Certificate number already exists, try next sequence
+    nextSeq++;
+    attempts++;
   }
 
-  // Combine results from both queries
-  const allCertificates = [
-    ...(resultSlash.data || []),
-    ...(resultHyphen.data || []),
-  ];
+  // If we've tried too many times, throw an error
+  throw new Error(`Unable to generate unique certificate number after ${maxAttempts} attempts. Please check for duplicate entries.`);
+};
 
-  const maxSequence = allCertificates
-    .map((row) => extractSequenceNumber(row.certificate_no))
-    .reduce((acc, value) => Math.max(acc, value), 0) ?? 0;
-
-  return maxSequence + 1;
+export const getNextSequence = async ({ prefix = DEFAULT_PREFIX, yearSegment = YEAR_SEGMENT, useGlobal = false }) => {
+  // Use the new unique certificate number generator
+  // CONSTANT: yearSegment is always '25-26' for certificate numbers
+  return await getUniqueCertificateNumber({ prefix, yearSegment: YEAR_SEGMENT, useGlobal });
 };
 
 export const buildQrCodeUrl = (certificateNo) => {

@@ -69,7 +69,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
   const [visibleItems, setVisibleItems] = useState({
     badge: false,
     name: false,
-    details: Array(6).fill(false),
+    details: Array(6).fill(false), // 6 detail fields (Course Name, Roll No, Department removed)
   });
 
   const handleVerify = async (value) => {
@@ -100,11 +100,13 @@ const VerifyCertificate = ({ initialCertificate }) => {
       let queryError = null;
 
       // Try exact match with all possible formats
+      // Only show approved certificates in verification
       for (const format of lookupFormats) {
         const { data: result, error } = await supabase
           .from('certificates')
           .select('*')
           .eq('certificate_no', format)
+          .eq('status', 'approved')
           .maybeSingle();
 
         if (error) {
@@ -123,12 +125,14 @@ const VerifyCertificate = ({ initialCertificate }) => {
       }
 
       // Fallback to case-insensitive search if exact match fails
+      // Only show approved certificates in verification
       if (!data) {
         for (const format of lookupFormats) {
           const fallback = await supabase
             .from('certificates')
             .select('*')
             .ilike('certificate_no', format)
+            .eq('status', 'approved')
             .limit(1);
 
           if (fallback.error) {
@@ -144,9 +148,22 @@ const VerifyCertificate = ({ initialCertificate }) => {
 
       if (!data) {
         throw new Error(
-          'Certificate number not found in our records. Please check the number or contact Dare Centre support.'
+          'Certificate number not found or not yet approved. Only approved certificates can be verified. Please check the number or contact Dare Centre support.'
         );
       }
+
+      // Verify all required data is present
+      if (!data.certificate_no || !data.name) {
+        throw new Error('Certificate data is incomplete. Please contact Dare Centre support.');
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('Certificate verified successfully:', {
+        certificate_no: data.certificate_no,
+        name: data.name,
+        status: data.status,
+        hasAllFields: Boolean(data.certificate_no && data.name && data.date_issued)
+      });
 
       // Update URL without causing navigation issues
       const newPath = `/verify/${toPathCertificate(data.certificate_no)}`;
@@ -154,7 +171,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
         window.history.replaceState(null, '', newPath);
       }
       
-      // Set result and reset visibility state
+      // Set result and reset visibility state (6 detail fields - Course Name, Roll No, Department removed)
       setResult(data);
       setError('');
       setVisibleItems({
@@ -202,7 +219,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
       setVisibleItems({
         badge: false,
         name: false,
-        details: Array(6).fill(false),
+        details: Array(9).fill(false),
       });
       return;
     }
@@ -234,6 +251,7 @@ const VerifyCertificate = ({ initialCertificate }) => {
       );
 
       // Details appear one by one with 1-second gaps
+      // Course Name, Roll No, and Department removed from verification display
       const detailFields = [
         'certificate_no',
         'email',

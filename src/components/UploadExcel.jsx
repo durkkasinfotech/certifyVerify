@@ -3,13 +3,16 @@ import * as XLSX from 'xlsx';
 import { parseExcelFile } from '../utils/excelParser';
 import {
   buildQrCodeUrl,
+  certificateNumberExists,
   formatDateForDb,
   getAcademicYearSegment,
   getNextSequence,
   makeCertificateNumber,
+  normalizeAcademicYearSegment,
   normalizeDate,
 } from '../utils/certificateHelpers';
 import { supabase } from '../utils/supabaseClient';
+import { getUserRole } from '../utils/authHelpers';
 
 const UploadExcel = ({ onUploadComplete }) => {
   const [fileName, setFileName] = useState('');
@@ -190,6 +193,10 @@ const UploadExcel = ({ onUploadComplete }) => {
         }
       }
 
+      // Determine status based on user role
+      const userRole = await getUserRole();
+      const status = userRole === 'super_admin' ? 'approved' : 'pending_approval';
+
       const cache = new Map();
       const payload = [];
 
@@ -202,20 +209,46 @@ const UploadExcel = ({ onUploadComplete }) => {
           );
         }
 
-        const academicYear = getAcademicYearSegment(issuedDate);
+        // CONSTANT: Year segment is always '25-26' for certificate numbers
+        const yearSegment = '25-26';
 
         let certificateNo =
           `${row.certificate_no_raw ?? ''}`.trim().replace(/\s+/g, '').toUpperCase() || '';
 
         if (!certificateNo) {
-          if (!cache.has(academicYear)) {
-            const nextSeq = await getNextSequence({ yearSegment: academicYear });
-            cache.set(academicYear, nextSeq);
+          // Auto-generate from highest existing certificate number globally
+          // For bulk upload, we need to track sequence to avoid duplicates within the same upload
+          if (!cache.has(yearSegment)) {
+            const nextSeq = await getNextSequence({ yearSegment, useGlobal: true });
+            cache.set(yearSegment, nextSeq);
           }
 
-          const nextSequence = cache.get(academicYear);
-          certificateNo = makeCertificateNumber(nextSequence, academicYear);
-          cache.set(academicYear, nextSequence + 1);
+          let nextSequence = cache.get(yearSegment);
+          let candidateCertNo = makeCertificateNumber(nextSequence);
+          
+          // Check for duplicates and keep incrementing until we find a unique number
+          let exists = await certificateNumberExists(candidateCertNo);
+          let attempts = 0;
+          
+          while (exists && attempts < 100) {
+            nextSequence++;
+            candidateCertNo = makeCertificateNumber(nextSequence);
+            exists = await certificateNumberExists(candidateCertNo);
+            attempts++;
+          }
+          
+          if (exists) {
+            throw new Error(`Unable to generate unique certificate number for row ${index + 1}. Too many duplicates found.`);
+          }
+          
+          certificateNo = candidateCertNo;
+          cache.set(yearSegment, nextSequence + 1);
+        } else {
+          // If certificate number is provided, verify it's unique
+          const exists = await certificateNumberExists(certificateNo);
+          if (exists) {
+            throw new Error(`Certificate number ${certificateNo} already exists (row ${index + 1}). Please use a unique certificate number.`);
+          }
         }
 
         const toNullIfEmpty = (input) => {
@@ -229,7 +262,7 @@ const UploadExcel = ({ onUploadComplete }) => {
           roll_no: `${row.roll_no}`.trim(),
           name: `${row.name}`.trim(),
           department: `${row.department}`.trim(),
-          academic_year: `${row.academic_year}`.trim() || academicYear,
+          academic_year: `${row.academic_year}`.trim() || null,
           course_name: toNullIfEmpty(row.course_name) || 'AI-Powered Logistics Practitioner - Foundation Level',
           location_or_institution: `${row.location_or_institution}`.trim(),
           location: `${row.location}`.trim(),
@@ -240,6 +273,7 @@ const UploadExcel = ({ onUploadComplete }) => {
           email: `${row.email}`.trim().toLowerCase(),
           date_issued: formatDateForDb(issuedDate),
           qr_code_url: row.qr_code_url || buildQrCodeUrl(certificateNo),
+          status: status,
           // created_at will use database default: timezone('utc', now())
         });
       }
@@ -382,7 +416,9 @@ const UploadExcel = ({ onUploadComplete }) => {
                     </td>
                     <td className="px-2 py-2 text-slate-600 sm:px-4 sm:py-3 whitespace-nowrap text-xs sm:text-sm">{issuedText}</td>
                     <td className="px-2 py-2 text-slate-600 sm:px-4 sm:py-3">
-                      {row.certificate_no_raw || (
+                      {row.certificate_no_raw ? (
+                        <span className="font-mono text-xs font-semibold text-dark break-all">{row.certificate_no_raw}</span>
+                      ) : (
                         <span className="text-[10px] uppercase text-amber-600 sm:text-xs">Auto-generate</span>
                       )}
                     </td>

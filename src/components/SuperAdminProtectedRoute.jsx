@@ -3,10 +3,10 @@ import { Navigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import { getUserRole, setCachedUserRole, clearCachedUserRole, getCachedUserRole } from '../utils/authHelpers';
 
-const ProtectedRoute = ({ children }) => {
+const SuperAdminProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [redirectToSuperAdmin, setRedirectToSuperAdmin] = useState(false);
+  const [redirectToAdmin, setRedirectToAdmin] = useState(false);
   const hasLoadedRef = useRef(false); // Track if we've already loaded with cache
 
   useEffect(() => {
@@ -27,18 +27,18 @@ const ProtectedRoute = ({ children }) => {
         return;
       }
 
-      // If cached role is super_admin, redirect to super admin route immediately
-      if (cachedRole === 'super_admin' && storedSession) {
+      // If cached role is admin, redirect to admin route immediately
+      if (cachedRole === 'admin' && storedSession) {
         // eslint-disable-next-line no-console
-        console.log('ProtectedRoute - Cached super admin detected, redirecting to super admin route');
-        setRedirectToSuperAdmin(true);
+        console.log('SuperAdminProtectedRoute - Cached admin detected, redirecting to admin route');
+        setRedirectToAdmin(true);
         setIsAuthenticated(false);
         setIsLoading(false);
         return;
       }
 
-      // If we have cached admin role and session, load IMMEDIATELY (0 delay)
-      if (cachedRole === 'admin' && storedSession) {
+      // If we have cached super_admin role and session, load IMMEDIATELY (0 delay)
+      if (cachedRole === 'super_admin' && storedSession) {
         // Load instantly with cached data - no async checks
         setIsAuthenticated(true);
         setIsLoading(false);
@@ -76,11 +76,11 @@ const ProtectedRoute = ({ children }) => {
       try {
         // Full authentication check with very short timeout
         const sessionPromise = supabase.auth.getSession();
-        const sessionTimeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Session check timeout')), 1000)
         );
 
-        const { data: { session }, error } = await Promise.race([sessionPromise, sessionTimeoutPromise]);
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
 
         if (error || !session) {
           sessionStorage.removeItem('auth_session');
@@ -90,9 +90,9 @@ const ProtectedRoute = ({ children }) => {
           return;
         }
 
-        // Check user role with shorter timeout
+        // Check if user is super admin with shorter timeout
         // eslint-disable-next-line no-console
-        console.log('ProtectedRoute - Checking role...');
+        console.log('SuperAdminProtectedRoute - Checking role...');
         
         const rolePromise = getUserRole();
         const roleTimeoutPromise = new Promise((_, reject) => 
@@ -104,27 +104,31 @@ const ProtectedRoute = ({ children }) => {
           role = await Promise.race([rolePromise, roleTimeoutPromise]);
         } catch (roleError) {
           // eslint-disable-next-line no-console
-          console.error('ProtectedRoute - Role check error:', roleError);
+          console.error('SuperAdminProtectedRoute - Role check error:', roleError);
           
           // If timeout, use cached role if available
           if (roleError.message === 'Role check timeout') {
-            if (cachedRole === 'super_admin') {
+            if (cachedRole === 'admin') {
               // eslint-disable-next-line no-console
-              console.log('ProtectedRoute - Role check timeout, cached super admin detected, redirecting');
-              setRedirectToSuperAdmin(true);
+              console.log('SuperAdminProtectedRoute - Role check timeout, cached admin detected, redirecting');
+              setRedirectToAdmin(true);
               setIsAuthenticated(false);
               setIsLoading(false);
               return;
-            } else if (cachedRole === 'admin') {
+            } else if (cachedRole === 'super_admin') {
               // eslint-disable-next-line no-console
-              console.log('ProtectedRoute - Role check timeout, using cached admin role');
-              role = 'admin';
+              console.log('SuperAdminProtectedRoute - Role check timeout, using cached role');
+              role = 'super_admin';
             } else {
+              sessionStorage.removeItem('auth_session');
+              clearCachedUserRole();
               setIsAuthenticated(false);
               setIsLoading(false);
               return;
             }
           } else {
+            sessionStorage.removeItem('auth_session');
+            clearCachedUserRole();
             setIsAuthenticated(false);
             setIsLoading(false);
             return;
@@ -132,33 +136,42 @@ const ProtectedRoute = ({ children }) => {
         }
         
         // eslint-disable-next-line no-console
-        console.log('ProtectedRoute - User role:', role);
+        console.log('SuperAdminProtectedRoute - User role:', role);
         
         if (!role) {
           // eslint-disable-next-line no-console
-          console.log('ProtectedRoute - No role found, denying access');
+          console.log('SuperAdminProtectedRoute - No role found');
+          sessionStorage.removeItem('auth_session');
+          clearCachedUserRole();
           setIsAuthenticated(false);
           setIsLoading(false);
           return;
         }
         
-        if (role === 'super_admin') {
-          // Super admin should use their own route - redirect immediately
+        if (role !== 'super_admin') {
           // eslint-disable-next-line no-console
-          console.log('ProtectedRoute - Super admin detected, redirecting to super admin route');
-          setRedirectToSuperAdmin(true);
+          console.log('SuperAdminProtectedRoute - Wrong role:', role, 'Expected: super_admin');
+          
+          // If user is admin, redirect to admin dashboard
+          if (role === 'admin') {
+            // eslint-disable-next-line no-console
+            console.log('SuperAdminProtectedRoute - Admin detected, redirecting to admin route');
+            setRedirectToAdmin(true);
+            setIsAuthenticated(false);
+            setIsLoading(false);
+            return;
+          }
+          
+          // For other roles or no role, clear session and redirect to login
+          sessionStorage.removeItem('auth_session');
+          clearCachedUserRole();
           setIsAuthenticated(false);
           setIsLoading(false);
           return;
         }
         
-        if (role !== 'admin') {
-          // eslint-disable-next-line no-console
-          console.log('ProtectedRoute - Invalid role:', role);
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
+        // eslint-disable-next-line no-console
+        console.log('SuperAdminProtectedRoute - Access granted');
 
         // Update sessionStorage and cache
         sessionStorage.setItem('auth_session', JSON.stringify(session));
@@ -167,17 +180,17 @@ const ProtectedRoute = ({ children }) => {
         hasLoadedRef.current = true;
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('ProtectedRoute - Auth check error:', err);
+        console.error('SuperAdminProtectedRoute - Auth check error:', err);
         
-        // If timeout and we have cached role, check if super admin first
-        if (err.message?.includes('timeout') && cachedRole === 'super_admin' && storedSession) {
+        // If timeout error, check cached role and redirect accordingly
+        if (err.message?.includes('timeout') && cachedRole === 'admin' && storedSession) {
           // eslint-disable-next-line no-console
-          console.log('ProtectedRoute - Using cached super admin role due to timeout, redirecting');
-          setRedirectToSuperAdmin(true);
+          console.log('SuperAdminProtectedRoute - Using cached admin role due to timeout, redirecting');
+          setRedirectToAdmin(true);
           setIsAuthenticated(false);
-        } else if (err.message?.includes('timeout') && cachedRole === 'admin' && storedSession) {
+        } else if (err.message?.includes('timeout') && cachedRole === 'super_admin' && storedSession) {
           // eslint-disable-next-line no-console
-          console.log('ProtectedRoute - Using cached admin role due to timeout');
+          console.log('SuperAdminProtectedRoute - Using cached data due to timeout');
           setIsAuthenticated(true);
           hasLoadedRef.current = true;
         } else {
@@ -213,11 +226,11 @@ const ProtectedRoute = ({ children }) => {
           
           const role = await Promise.race([rolePromise, timeoutPromise]);
           
-          if (role === 'super_admin') {
-            // Super admin trying to access admin route - redirect
-            setRedirectToSuperAdmin(true);
+          if (role === 'admin') {
+            // Admin trying to access super admin route - redirect
+            setRedirectToAdmin(true);
             setIsAuthenticated(false);
-          } else if (role === 'admin') {
+          } else if (role === 'super_admin') {
             sessionStorage.setItem('auth_session', JSON.stringify(session));
             setCachedUserRole(role);
             setIsAuthenticated(true);
@@ -227,7 +240,7 @@ const ProtectedRoute = ({ children }) => {
           }
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.error('ProtectedRoute - Auth state change role check error:', err);
+          console.error('SuperAdminProtectedRoute - Auth state change role check error:', err);
           // Don't redirect if we already loaded with cache
           if (!hasLoadedRef.current) {
             setIsAuthenticated(false);
@@ -238,7 +251,6 @@ const ProtectedRoute = ({ children }) => {
       }
     });
 
-    // Cleanup subscription
     return () => {
       subscription?.unsubscribe();
     };
@@ -255,13 +267,13 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // Redirect super admin to their own route
-  if (redirectToSuperAdmin) {
-    return <Navigate to="/superadmin" replace />;
+  // Redirect admin to their own route
+  if (redirectToAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? children : <Navigate to="/superadmin/login" replace />;
 };
 
-export default ProtectedRoute;
+export default SuperAdminProtectedRoute;
 

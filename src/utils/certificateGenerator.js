@@ -18,8 +18,13 @@ export async function generateCertificatePDF(studentData, certificateNo = null) 
             throw new Error('Student name is required');
         }
 
-        // Generate certificate number if not provided
-        const finalCertNo = certificateNo || await generateCertificateNumber(studentData);
+        // ALWAYS use certificate number from database (studentData.certificate_no)
+        // This ensures PDF uses the exact certificate number stored in the database
+        const finalCertNo = certificateNo || studentData.certificate_no;
+        
+        if (!finalCertNo) {
+            throw new Error('Certificate number is required. Please ensure the certificate exists in the database with a valid certificate number.');
+        }
 
         // 1. Load the template
         // Use absolute URL in production to ensure proper static file serving

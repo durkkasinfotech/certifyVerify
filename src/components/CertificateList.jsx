@@ -5,6 +5,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { QRCodeCanvas } from 'qrcode.react';
+import JSZip from 'jszip';
 import { toExcelWorkbook } from '../utils/excelParser';
 import { extractSequenceNumber } from '../utils/certificateHelpers';
 import { generateCertificatePDF, downloadPDF, viewPDF } from '../utils/certificateGenerator';
@@ -58,6 +59,7 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
   const [generatingCertId, setGeneratingCertId] = useState(null);
   const [editingCertificate, setEditingCertificate] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [downloadingAllQr, setDownloadingAllQr] = useState(false);
 
   const filteredCertificates = useMemo(() => {
     let filtered = certificates;
@@ -285,34 +287,119 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
     doc.save(`certificate-details-${Date.now()}.pdf`);
   };
 
+  // Sanitize filename by removing invalid characters
+  const sanitizeFileName = (str) => {
+    if (!str) return '';
+    return str.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, '_').trim();
+  };
+
+  const getQrFileName = (record) => {
+    const name = sanitizeFileName(record.name);
+    const certNo = sanitizeFileName(record.certificate_no);
+    
+    // Build filename: Name_CertificateNumber.png
+    let filename = certNo;
+    if (name) {
+      filename = `${name}_${certNo}`;
+    }
+    return `${filename}.png`;
+  };
+
   const handleDownloadQr = (record) => {
     if (!record || !record.certificate_no) return;
     const canvas = document.getElementById(getQrElementId(record.certificate_no));
     if (!canvas) return;
 
-    // Sanitize filename by removing invalid characters
-    const sanitizeFileName = (str) => {
-      if (!str) return '';
-      return str.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, '_').trim();
-    };
-
-    const name = sanitizeFileName(record.name);
-    const rollNo = sanitizeFileName(record.roll_no);
-
-    // Build filename with name and registration number
-    let filename = record.certificate_no;
-    if (name) {
-      filename = `${name}_${filename}`;
-    }
-    if (rollNo) {
-      filename = `${filename}_${rollNo}`;
-    }
-
+    const filename = getQrFileName(record);
     const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
     const link = document.createElement('a');
     link.href = pngUrl;
-    link.download = `${filename}.png`;
+    link.download = filename;
     link.click();
+  };
+
+  const handleDownloadAllApprovedQr = async () => {
+    // Filter only approved certificates
+    const approvedCertificates = filteredCertificates.filter(cert => cert.status === 'approved');
+    
+    if (approvedCertificates.length === 0) {
+      alert('No approved certificates found to download QR codes.');
+      return;
+    }
+
+    setDownloadingAllQr(true);
+
+    try {
+      const zip = new JSZip();
+      const qrFolder = zip.folder('approved_qr_codes');
+
+      // Wait a bit to ensure all QR codes are rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Process all QR codes and wait for all blobs
+      const blobPromises = approvedCertificates.map((record) => {
+        return new Promise((resolve) => {
+          try {
+            const canvas = document.getElementById(getQrElementId(record.certificate_no));
+            if (!canvas) {
+              // eslint-disable-next-line no-console
+              console.warn(`QR code canvas not found for ${record.certificate_no}`);
+              resolve(null);
+              return;
+            }
+
+            // Convert canvas to blob
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const filename = getQrFileName(record);
+                resolve({ filename, blob });
+              } else {
+                resolve(null);
+              }
+            }, 'image/png');
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(`Error processing QR for ${record.certificate_no}:`, error);
+            resolve(null);
+          }
+        });
+      });
+
+      // Wait for all blobs to be processed
+      const results = await Promise.all(blobPromises);
+      
+      let successCount = 0;
+      let failCount = 0;
+
+      // Add all successful blobs to zip
+      results.forEach((result) => {
+        if (result && result.blob) {
+          qrFolder.file(result.filename, result.blob);
+          successCount++;
+        } else {
+          failCount++;
+        }
+      });
+
+      if (successCount === 0) {
+        alert('No QR codes could be generated. Please ensure the certificates are displayed in the table.');
+        setDownloadingAllQr(false);
+        return;
+      }
+
+      // Generate zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipFileName = `approved_qr_codes_${new Date().toISOString().split('T')[0]}.zip`;
+      saveAs(zipBlob, zipFileName);
+
+      alert(`QR codes downloaded successfully!\n\nSuccess: ${successCount} files\nFailed: ${failCount} files`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error downloading QR codes:', error);
+      alert(`Failed to download QR codes: ${error.message}`);
+    } finally {
+      setDownloadingAllQr(false);
+    }
   };
 
   const handleViewCertificate = async (record) => {
@@ -437,6 +524,25 @@ const CertificateList = ({ certificates, isLoading, onRefresh, isSuperAdmin = fa
             <i className="fa fa-download text-xs" aria-hidden="true" />
           </button>
         </div>
+        <button
+          type="button"
+          onClick={handleDownloadAllApprovedQr}
+          disabled={downloadingAllQr || filteredCertificates.filter(cert => cert.status === 'approved').length === 0}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-600/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 transition hover:bg-emerald-600/20 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:border-slate-300 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
+          title="Download all approved QR codes as ZIP"
+        >
+          {downloadingAllQr ? (
+            <>
+              <i className="fa fa-spinner fa-spin text-xs" aria-hidden="true" />
+              <span>Downloading...</span>
+            </>
+          ) : (
+            <>
+              <i className="fa fa-qrcode text-xs" aria-hidden="true" />
+              <span>Download All QR</span>
+            </>
+          )}
+        </button>
         <p className="text-[10px] text-slate-500 sm:text-xs">
           Showing {filteredCertificates.length} of {certificates.length} certificate(s)
         </p>

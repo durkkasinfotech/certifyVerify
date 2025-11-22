@@ -757,7 +757,7 @@ const ManualEntry = ({ onUploadComplete }) => {
                       ) : (
                         <>
                           <i className="fa fa-cloud-upload-alt" aria-hidden="true" />
-                          <span>Save Certificate</span>
+                          <span>Send to Approval</span>
                         </>
                       )}
                     </button>

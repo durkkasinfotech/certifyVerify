@@ -449,7 +449,7 @@ const UploadExcel = ({ onUploadComplete }) => {
           ) : (
             <>
               <i className="fa fa-cloud-upload-alt" aria-hidden="true" />
-              Save to Supabase
+              Send to Approval
             </>
           )}
         </button>

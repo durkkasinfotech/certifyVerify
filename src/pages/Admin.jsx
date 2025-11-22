@@ -234,15 +234,15 @@ const Admin = () => {
                               {certificate.date_issued ? new Date(certificate.date_issued).toLocaleDateString() : '—'}
                             </td>
                             <td className="px-2 py-2 sm:px-4 sm:py-3">
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:px-3 sm:py-1 sm:text-xs ${
-                                certificate.status === 'pending_approval'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : certificate.status === 'rejected'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-slate-100 text-slate-700'
-                              }`}>
-                                {certificate.status === 'pending_approval' ? '⏳ Pending' : certificate.status === 'rejected' ? '✗ Rejected' : certificate.status || '—'}
-                              </span>
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:px-3 sm:py-1 sm:text-xs ${
+                              certificate.status === 'pending_approval'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : certificate.status === 'rejected'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {certificate.status === 'pending_approval' ? '⏳ Pending for Approval' : certificate.status === 'rejected' ? '✗ Rejected' : certificate.status || '—'}
+                            </span>
                             </td>
                             <td className="px-2 py-2 sm:px-4 sm:py-3 text-slate-500 text-xs">
                               {certificate.created_at

@@ -97,18 +97,18 @@ const SuperAdminLogin = () => {
         });
         
         // Simple error message for password/auth errors
-        let errorMessage = 'Incorrect password';
+        let errorMessage = 'Incorrect credentials';
         
         if (authError.message) {
           if (authError.message.includes('Invalid login credentials') || 
               authError.message.includes('Invalid credentials') ||
               authError.status === 400 ||
               authError.status === 401) {
-            errorMessage = 'Incorrect password';
+            errorMessage = 'Incorrect credentials';
           } else if (authError.status === 429) {
             errorMessage = 'Too many login attempts. Please try again later.';
           } else {
-            errorMessage = 'Incorrect password';
+            errorMessage = 'Incorrect credentials';
           }
         }
         
@@ -160,7 +160,7 @@ const SuperAdminLogin = () => {
       
       if (!role || role !== 'super_admin') {
         await supabase.auth.signOut();
-        setError('Incorrect password');
+        setError('Incorrect credentials');
         setIsLoading(false);
         return;
       }
